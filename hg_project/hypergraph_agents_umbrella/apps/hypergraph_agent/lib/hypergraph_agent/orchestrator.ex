@@ -32,11 +32,7 @@ defmodule HypergraphAgent.BasicOrchestrator do
           keyword()
         ) :: %{HypergraphAgent.AgentOrchestrator.node_id() => HypergraphAgent.AgentOrchestrator.output()}
   require Logger
-  @doc """
-  Orchestrate agent execution over a hypergraph. Returns {:ok, map} on success, {:error, reason} on failure.
-  Defensive: catches nil/atom returns and logs errors.
-  """
-  def orchestrate(graph, agent_map, input, opts \\ []) do
+  def orchestrate(graph, agent_map, input, _opts \\ []) do
     try do
       order = Engine.topo_sort(graph)
       result = Enum.reduce(order, %{}, fn node, acc ->

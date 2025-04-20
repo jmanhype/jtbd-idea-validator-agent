@@ -41,4 +41,12 @@ defmodule A2aAgentWebWeb.AgentControllerRegistryTest do
     conn = get(build_conn(), "/api/agent_card/agent42")
     assert json_response(conn, 404)["status"] == "error"
   end
+
+  test "unregistering non-existent agent returns 404", %{conn: conn} do
+    conn = delete(build_conn(), "/api/agent_card/doesnotexist")
+    resp = json_response(conn, 404)
+    assert resp["status"] == "error"
+    assert resp["error"] == "Agent not found"
+    assert resp["id"] == "doesnotexist"
+  end
 end

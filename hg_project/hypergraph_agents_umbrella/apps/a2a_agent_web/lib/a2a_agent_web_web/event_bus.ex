@@ -78,7 +78,7 @@ defmodule A2aAgentWebWeb.EventBus do
       {:ok, event} ->
         handle_event(event)
       _ ->
-        Logger.warn("[EventBus] Received invalid event payload: #{inspect(msg.body)}")
+        Logger.warning("[EventBus] Received invalid event payload: #{inspect(msg.body)}")
     end
     {:noreply, state}
   end

@@ -25,10 +25,23 @@ defmodule A2aAgentWebWeb.AgentController do
 
   @doc """
   Unregisters an agent by id (DELETE /api/agent_card/:id).
+  Returns 200 and status "ok" if the agent was unregistered, or 404 and status "error" if not found.
   """
+  @spec unregister_agent(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def unregister_agent(conn, %{"id" => id}) do
-    A2aAgentWebWeb.AgentRegistry.unregister_agent(id)
-    json(conn, %{status: "ok", id: id})
+    require Logger
+    case A2aAgentWebWeb.AgentRegistry.get_agent(id) do
+      nil ->
+        Logger.warn("Attempted to unregister non-existent agent: #{inspect(id)}")
+        conn
+        |> Plug.Conn.put_status(:not_found)
+        |> json(%{status: "error", error: "Agent not found", id: id})
+      _card ->
+        :ok = A2aAgentWebWeb.AgentRegistry.unregister_agent(id)
+        Logger.info("Unregistered agent: #{inspect(id)}")
+        conn
+        |> json(%{status: "ok", id: id})
+    end
   end
 
   @doc """
@@ -92,16 +105,48 @@ defmodule A2aAgentWebWeb.AgentController do
       event = GreEx.make([event: :message_received, type: req_type, agent_id: agent_id])
       GoldrushEx.handle(:message_received_handler, event)
       case A2aAgentWebWeb.A2AMessage.validate(params) do
-        {:ok, valid_msg} ->
-          # Publish to NATS event bus for distributed event streaming
-          :ok = A2aAgentWebWeb.EventBus.publish(%{
-            type: valid_msg.type,
-            sender: valid_msg.sender,
-            recipient: valid_msg.recipient,
-            payload: valid_msg.payload,
-            task_id: Map.get(params, "task_id", nil),
-            timestamp: Map.get(params, "timestamp", nil)
-          })
+        {:ok, msg} ->
+          type_str = to_string(msg.type)
+          case type_str do
+            "negotiation" ->
+              A2aAgentWebWeb.Metrics.inc_message("negotiation")
+              Logger.info("Received negotiation message: #{inspect(msg)}")
+              case A2aAgentWebWeb.NegotiationHandler.negotiate(msg.payload) do
+                {:accepted, reason} ->
+                  latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+                  A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
+                  A2aAgentWebWeb.Metrics.inc_negotiation("accepted")
+                  json(conn, %{status: "accepted", reason: reason})
+                {:rejected, reason} ->
+                  latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+                  A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
+                  A2aAgentWebWeb.Metrics.inc_negotiation("rejected")
+                  json(conn, %{status: "rejected", reason: reason})
+                other ->
+                  latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+                  A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
+                  A2aAgentWebWeb.Metrics.inc_negotiation("rejected")
+                  json(conn, %{status: "rejected", reason: inspect(other)})
+              end
+            "agent_discovery" ->
+              A2aAgentWebWeb.Metrics.inc_message("agent_discovery")
+              Logger.info("Received agent_discovery message: #{inspect(msg)}")
+              event = GreEx.make([event: :task_started, task_id: "agent_discovery", agent_id: agent_id])
+              GoldrushEx.handle(:task_started_handler, event)
+              agents = A2aAgentWebWeb.AgentRegistry.list_agents() || []
+              latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+              A2aAgentWebWeb.Metrics.observe_latency("agent_discovery", latency)
+              json(conn, %{status: "ok", agents: agents})
+            _ ->
+              msg_type = type_str
+              A2aAgentWebWeb.Metrics.inc_message(msg_type)
+              Logger.info("Received other message type: #{inspect(msg.type)}")
+              event = GreEx.make([event: :task_started, task_id: msg_type, agent_id: agent_id])
+              GoldrushEx.handle(:task_started_handler, event)
+              latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+              A2aAgentWebWeb.Metrics.observe_latency(msg_type, latency)
+              json(conn, %{status: "ok", info: "Message type handled: #{inspect(msg.type)} (stub)"})
+          end
 
         {:ok, %{type: :task_request, payload: payload} = _msg} when is_map(payload) ->
           if Map.get(payload, "stream", false) == true do
@@ -198,16 +243,18 @@ defmodule A2aAgentWebWeb.AgentController do
           Logger.info("Task chunk event for #{tid}: #{inspect(payload)}")
           json(conn, %{status: "ok", type: "task_chunk", task_id: tid, chunk: payload})
 
-        {:ok, %{type: :agent_discovery} = msg} ->
+        # Accept both atom and string for type field
+        {:ok, %{type: type} = msg} when type in [:agent_discovery, "agent_discovery"] ->
           A2aAgentWebWeb.Metrics.inc_message("agent_discovery")
           Logger.info("Received agent_discovery message: #{inspect(msg)}")
           event = GreEx.make([event: :task_started, task_id: "agent_discovery", agent_id: agent_id])
           GoldrushEx.handle(:task_started_handler, event)
-          agents = A2aAgentWebWeb.AgentRegistry.list_agents()
+          agents = A2aAgentWebWeb.AgentRegistry.list_agents() || []
           latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
           A2aAgentWebWeb.Metrics.observe_latency("agent_discovery", latency)
           json(conn, %{status: "ok", agents: agents})
-        {:ok, %{type: :negotiation, payload: payload} = msg} ->
+        # Accept both atom and string for type field
+        {:ok, %{type: type, payload: payload} = msg} when type in [:negotiation, "negotiation"] ->
           A2aAgentWebWeb.Metrics.inc_message("negotiation")
           Logger.info("Received negotiation message: #{inspect(msg)}")
           case A2aAgentWebWeb.NegotiationHandler.negotiate(payload) do
@@ -221,7 +268,20 @@ defmodule A2aAgentWebWeb.AgentController do
               A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
               A2aAgentWebWeb.Metrics.inc_negotiation("rejected")
               json(conn, %{status: "rejected", reason: reason})
+            other ->
+              latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+              A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
+              A2aAgentWebWeb.Metrics.inc_negotiation("rejected")
+              json(conn, %{status: "rejected", reason: inspect(other)})
           end
+
+        # Fallback for negotiation with malformed payload
+        {:ok, %{type: type}} when type in [:negotiation, "negotiation"] ->
+          latency = (System.monotonic_time(:microsecond) - start_time) / 1_000_000
+          A2aAgentWebWeb.Metrics.observe_latency("negotiation", latency)
+          A2aAgentWebWeb.Metrics.inc_negotiation("rejected")
+          json(conn, %{status: "rejected", reason: "Invalid negotiation payload"})
+
         {:ok, msg} ->
           msg_type = to_string(msg.type)
           A2aAgentWebWeb.Metrics.inc_message(msg_type)
