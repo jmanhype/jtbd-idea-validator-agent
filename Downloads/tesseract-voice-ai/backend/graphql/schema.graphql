@@ -1,0 +1,175 @@
+# GraphQL Schema for Test Control Plane
+type Query {
+  # Get current test run status
+  testStatus(runId: String!): TestRun!
+  
+  # List available test suites
+  availableTests: [TestSuite!]!
+  
+  # Get scaffold templates
+  scaffoldTemplates: [ScaffoldTemplate!]!
+}
+
+type Mutation {
+  # Run tests with optional dry run mode
+  runTests(
+    suite: String!
+    dryRun: Boolean = true
+    options: TestOptions
+  ): TestRun!
+  
+  # Scaffold a new page or component
+  scaffoldPage(
+    template: String!
+    name: String!
+    path: String!
+    dryRun: Boolean = true
+    options: ScaffoldOptions
+  ): ScaffoldResult!
+  
+  # Apply changes after dry run
+  applyChanges(
+    runId: String!
+    confirmation: ConfirmationInput!
+  ): ApplyResult!
+}
+
+type Subscription {
+  # Subscribe to test run progress updates
+  runProgress(runId: String!): ProgressUpdate!
+  
+  # Subscribe to all system events
+  systemEvents: SystemEvent!
+}
+
+# Test execution types
+type TestRun {
+  id: String!
+  suite: String!
+  status: TestStatus!
+  startTime: String!
+  endTime: String
+  results: [TestResult!]!
+  dryRun: Boolean!
+}
+
+type TestResult {
+  name: String!
+  status: TestStatus!
+  duration: Float!
+  error: String
+  assertions: Int!
+}
+
+type TestSuite {
+  name: String!
+  description: String!
+  testCount: Int!
+  estimatedDuration: Float!
+}
+
+enum TestStatus {
+  PENDING
+  RUNNING
+  PASSED
+  FAILED
+  SKIPPED
+  CANCELLED
+}
+
+input TestOptions {
+  parallel: Boolean
+  timeout: Int
+  verbose: Boolean
+  coverage: Boolean
+}
+
+# Scaffolding types
+type ScaffoldTemplate {
+  name: String!
+  description: String!
+  category: String!
+  variables: [TemplateVariable!]!
+}
+
+type TemplateVariable {
+  name: String!
+  type: String!
+  required: Boolean!
+  default: String
+}
+
+type ScaffoldResult {
+  id: String!
+  template: String!
+  files: [FileChange!]!
+  dryRun: Boolean!
+  preview: String!
+}
+
+type FileChange {
+  path: String!
+  action: FileAction!
+  content: String
+  diff: String
+}
+
+enum FileAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+input ScaffoldOptions {
+  typescript: Boolean
+  cssModule: Boolean
+  tests: Boolean
+  storybook: Boolean
+}
+
+# Progress and events
+type ProgressUpdate {
+  runId: String!
+  type: ProgressType!
+  progress: Float!
+  message: String!
+  details: String
+  timestamp: String!
+}
+
+enum ProgressType {
+  TEST_START
+  TEST_COMPLETE
+  TEST_PROGRESS
+  SCAFFOLD_START
+  SCAFFOLD_COMPLETE
+  ERROR
+  WARNING
+  INFO
+}
+
+type SystemEvent {
+  id: String!
+  type: String!
+  payload: String!
+  timestamp: String!
+}
+
+# Confirmation and application
+input ConfirmationInput {
+  confirmed: Boolean!
+  reason: String
+  modifications: [ModificationInput!]
+}
+
+input ModificationInput {
+  fileIndex: Int!
+  newContent: String!
+}
+
+type ApplyResult {
+  success: Boolean!
+  message: String!
+  appliedChanges: [FileChange!]!
+  errors: [String!]
+}

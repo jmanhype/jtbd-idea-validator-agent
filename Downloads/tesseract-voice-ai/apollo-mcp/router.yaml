@@ -1,0 +1,243 @@
+# Apollo Router Configuration for MCP Exposure
+# Transforms GraphQL operations into MCP tools
+
+# Server configuration
+supergraph:
+  listen: 0.0.0.0:4001
+  path: /
+  introspection: true
+
+# MCP tool exposure configuration
+plugins:
+  mcp.expose:
+    enabled: true
+    tools:
+      - name: "RunTests"
+        description: "Execute test suites with dry-run support"
+        operation: |
+          mutation RunTests($suite: String!, $dryRun: Boolean!, $options: TestOptions) {
+            runTests(suite: $suite, dryRun: $dryRun, options: $options) {
+              id
+              suite
+              status
+              startTime
+              dryRun
+              results {
+                name
+                status
+              }
+            }
+          }
+        parameters:
+          suite:
+            type: string
+            required: true
+            description: "Test suite to run (unit, integration, e2e)"
+          dryRun:
+            type: boolean
+            default: true
+            description: "Run in dry-run mode"
+          options:
+            type: object
+            properties:
+              parallel:
+                type: boolean
+                default: false
+              timeout:
+                type: integer
+                default: 30000
+              verbose:
+                type: boolean
+                default: false
+              coverage:
+                type: boolean
+                default: false
+
+      - name: "ScaffoldPage"
+        description: "Generate new page or component from template"
+        operation: |
+          mutation ScaffoldPage(
+            $template: String!,
+            $name: String!,
+            $path: String!,
+            $dryRun: Boolean!,
+            $options: ScaffoldOptions
+          ) {
+            scaffoldPage(
+              template: $template,
+              name: $name,
+              path: $path,
+              dryRun: $dryRun,
+              options: $options
+            ) {
+              id
+              template
+              dryRun
+              preview
+              files {
+                path
+                action
+                content
+              }
+            }
+          }
+        parameters:
+          template:
+            type: string
+            required: true
+            description: "Template to use (react-component, api-route)"
+          name:
+            type: string
+            required: true
+            description: "Name of the component or page"
+          path:
+            type: string
+            required: true
+            description: "Path where to create files"
+          dryRun:
+            type: boolean
+            default: true
+            description: "Preview changes without applying"
+          options:
+            type: object
+            properties:
+              typescript:
+                type: boolean
+                default: true
+              cssModule:
+                type: boolean
+                default: true
+              tests:
+                type: boolean
+                default: true
+              storybook:
+                type: boolean
+                default: false
+
+      - name: "RunProgress"
+        description: "Subscribe to test run progress updates"
+        operation: |
+          subscription RunProgress($runId: String!) {
+            runProgress(runId: $runId) {
+              runId
+              type
+              progress
+              message
+              details
+              timestamp
+            }
+          }
+        parameters:
+          runId:
+            type: string
+            required: true
+            description: "ID of the test run to monitor"
+
+      - name: "ApplyChanges"
+        description: "Apply changes after dry-run confirmation"
+        operation: |
+          mutation ApplyChanges($runId: String!, $confirmation: ConfirmationInput!) {
+            applyChanges(runId: $runId, confirmation: $confirmation) {
+              success
+              message
+              appliedChanges {
+                path
+                action
+              }
+              errors
+            }
+          }
+        parameters:
+          runId:
+            type: string
+            required: true
+            description: "ID of the dry-run to apply"
+          confirmation:
+            type: object
+            required: true
+            properties:
+              confirmed:
+                type: boolean
+                required: true
+              reason:
+                type: string
+              modifications:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    fileIndex:
+                      type: integer
+                    newContent:
+                      type: string
+
+# Rhai script for MCP transformation
+rhai:
+  scripts: |
+    fn mcp_transform_request(request) {
+      // Add MCP headers
+      request.headers["x-mcp-version"] = "1.0";
+      request.headers["x-mcp-tool"] = request.context.get("mcp_tool");
+      request;
+    }
+    
+    fn mcp_transform_response(response) {
+      // Format response for MCP
+      if response.errors.len() > 0 {
+        response.extensions.mcp_error = true;
+      }
+      response;
+    }
+
+# Telemetry
+telemetry:
+  exporters:
+    metrics:
+      prometheus:
+        enabled: true
+        listen: 0.0.0.0:9090
+        path: /metrics
+    
+    tracing:
+      otlp:
+        enabled: ${env.APOLLO_ROUTER_TRACING_OTLP:-false}
+        endpoint: ${env.APOLLO_ROUTER_TRACING_OTLP_ENDPOINT:-http://localhost:4317}
+        protocol: grpc
+
+# Traffic shaping
+traffic_shaping:
+  router:
+    timeout: 30s
+  all:
+    deduplicate_query: true
+    compression: br
+    
+  subgraphs:
+    test-control:
+      timeout: 20s
+      rate_limit:
+        capacity: 100
+        interval: 1s
+
+# Authorization and authentication
+authentication:
+  router:
+    jwt:
+      jwks:
+        - url: ${env.JWKS_URL:-https://example.com/.well-known/jwks.json}
+
+authorization:
+  require_authentication: false
+  
+# Caching
+cache:
+  in_memory:
+    limit: 512
+
+# Logging
+logging:
+  experimental_when_header: 
+    - name: x-mcp-debug
+      value: true
+      headers: true
+      body: true

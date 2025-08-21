@@ -1,0 +1,72 @@
+# Apollo Federation Supergraph Configuration
+# Exposes GraphQL backend as federated service
+
+federation_version: 2.5
+
+subgraphs:
+  test-control:
+    routing_url: http://localhost:4000/graphql
+    schema:
+      subgraph_url: http://localhost:4000/graphql
+      introspection: true
+      
+# Enable query planning and caching
+query_planning:
+  cache:
+    redis:
+      urls: ["redis://localhost:6379"]
+  
+# Performance optimizations
+limits:
+  max_depth: 10
+  max_root_fields: 20
+  max_aliases: 30
+
+# Telemetry configuration
+telemetry:
+  apollo:
+    api_key: ${env.APOLLO_KEY}
+    graph_ref: ${env.APOLLO_GRAPH_REF}
+  
+  metrics:
+    common:
+      service_name: apollo-mcp-router
+      service_namespace: mcp
+      
+  tracing:
+    propagation:
+      baggage: true
+      trace_context: true
+      
+# CORS configuration
+cors:
+  allow_any_origin: true
+  allow_credentials: true
+
+# Subscription configuration
+subscription:
+  enabled: true
+  mode:
+    passthrough:
+      all:
+        path: /graphql/ws
+        protocol: graphql_ws
+        
+# Headers to propagate
+headers:
+  all:
+    request:
+      - propagate:
+          matching: ^x-mcp-.*
+      - propagate:
+          named: authorization
+          
+# Health check
+health_check:
+  enabled: true
+  path: /health
+  
+# Sandbox
+sandbox:
+  enabled: true
+  endpoint: /sandbox
