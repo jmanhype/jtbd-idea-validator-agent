@@ -1,0 +1,71 @@
+
+🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍
+   INVESTIGATING PROMPT DRIFT
+🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍🔍
+
+1. SEED VARIATION TEST
+========================================
+Testing: 'a futuristic sports car' with seed 5200
+  Seed 5200: Saved investigate_seed_5200.png
+Testing: 'a futuristic sports car' with seed 5201
+  Seed 5201: Saved investigate_seed_5201.png
+Testing: 'a futuristic sports car' with seed 5250
+  Seed 5250: Saved investigate_seed_5250.png
+Testing: 'a futuristic sports car' with seed 1000
+  Seed 1000: Saved investigate_seed_1000.png
+Testing: 'a futuristic sports car' with seed 2000
+  Seed 2000: Saved investigate_seed_2000.png
+Testing: 'a futuristic sports car' with seed 3000
+  Seed 3000: Saved investigate_seed_3000.png
+
+2. PROMPT VARIATION TEST
+========================================
+Testing: 'a sports car' with seed 1000
+  'a sports car': Saved investigate_prompt_00.png
+Testing: 'a red sports car' with seed 1000
+  'a red sports car': Saved investigate_prompt_01.png
+Testing: 'a futuristic car' with seed 1000
+  'a futuristic car': Saved investigate_prompt_02.png
+Testing: 'a sports car in garage' with seed 1000
+  'a sports car in garage': Saved investigate_prompt_03.png
+Testing: 'sports car, automotive, vehicle' with seed 1000
+  'sports car, automotive, vehicle': Saved investigate_prompt_04.png
+Testing: 'a sleek futuristic sports car, automotive photography' with seed 1000
+  'a sleek futuristic sports car, automotive photography': Saved investigate_prompt_05.png
+
+3. STEP COUNT TEST
+========================================
+Testing: 'a red sports car' with seed 1000
+  10 steps: Saved investigate_steps_10.png
+Testing: 'a red sports car' with seed 1000
+  15 steps: Saved investigate_steps_15.png
+Testing: 'a red sports car' with seed 1000
+  20 steps: Saved investigate_steps_20.png
+Testing: 'a red sports car' with seed 1000
+  25 steps: Saved investigate_steps_25.png
+
+4. CONTROL PROMPTS TEST
+========================================
+Testing: 'a cat sitting on a chair' with seed 1000
+  'a cat sitting on a chair': Saved investigate_control_00.png
+Testing: 'a mountain landscape' with seed 1001
+  'a mountain landscape': Saved investigate_control_01.png
+Testing: 'a portrait of a woman' with seed 1002
+  'a portrait of a woman': Saved investigate_control_02.png
+Testing: 'a house with red roof' with seed 1003
+  'a house with red roof': Saved investigate_control_03.png
+
+==================================================
+🔍 INVESTIGATION COMPLETE!
+==================================================
+Check the generated files to see:
+  • investigate_seed_*.png - Same prompt, different seeds
+  • investigate_prompt_*.png - Different car prompts
+  • investigate_steps_*.png - Different step counts
+  • investigate_control_*.png - Control prompts
+
+This will reveal if the issue is:
+  - Seed-specific (only some seeds fail)
+  - Prompt-specific (model doesn't understand 'futuristic sports car')
+  - Parameter-specific (steps/cfg causing drift)
+  - Model-specific (SD 2.1 base has issues with cars)

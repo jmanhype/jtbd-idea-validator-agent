@@ -1,0 +1,19 @@
+
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+   COREPULSE MEGA DEMONSTRATION
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
+======================================================================
+🎯 PORTRAITS COMPARISONS
+======================================================================
+
+1. Prompt: a professional headshot of a business executive
+   Generating normal...
+Traceback (most recent call last):
+  File "/Users/speed/Downloads/corpus-mlx/corepulse_mega_demo.py", line 397, in <module>
+    main()
+  File "/Users/speed/Downloads/corpus-mlx/corepulse_mega_demo.py", line 317, in main
+    demo.run_category_comparisons("Portraits", portrait_prompts, 
+  File "/Users/speed/Downloads/corpus-mlx/corepulse_mega_demo.py", line 48, in run_category_comparisons
+    normal_img = self._generate_normal(prompt, num_steps, normal_seed)
+AttributeError: 'MegaCorePulseDemo' object has no attribute '_generate_normal'

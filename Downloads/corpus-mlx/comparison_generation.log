@@ -1,0 +1,63 @@
+
+======================================================================
+🎯 COREPULSE-STYLE COMPARISON GENERATION
+   Creating BEFORE/AFTER demonstrations
+======================================================================
+
+🚀 ASTRONAUT PHOTOREALISTIC COMPARISON
+============================================================
+
+[1] Generating ORIGINAL (no manipulation)...
+
+[2] Generating WITH BOOST (5x photorealistic)...
+🚀 Astronaut Photorealistic Enhancement
+   Original: a photorealistic portrait of an astronaut, detailed spacesuit
+   ✅ Amplified: ['photorealistic', 'realistic', 'detailed']... (5x)
+   ⬇️ Suppressed: ['cartoon', 'illustration', 'painting']... (0.1x)
+   🎯 Result: Enhanced photorealism without prompt change!
+✅ Created comparison: astronaut_comparison.png
+
+🐱→🐕 CAT TO DOG MASKING COMPARISON
+============================================================
+
+[1] Generating ORIGINAL (cat)...
+
+[2] Applying token masking (cat→dog)...
+🐱 Token-Level Attention Masking
+   Prompt: a cat playing at a park, sunny day, green grass
+   Mask: ['cat']
+   Preserve: ['playing', 'park', 'sunny', 'grass']
+   🚫 Masked: ['cat'] (0.01x)
+   ✅ Preserved: ['playing', 'park', 'sunny', 'grass'] (3x)
+   🔄 Injected: ['dog', 'canine'] (5x)
+   Result: Cat → Dog while keeping park context!
+✅ Created comparison: cat_dog_comparison.png
+
+🏰 CATHEDRAL MULTI-SCALE COMPARISON
+============================================================
+
+[1] Generating BASELINE (no multi-scale)...
+
+[2] Generating WITH MULTI-SCALE (structure + details)...
+🏰 Multi-Scale Architecture Control
+   Structure (low-res): gothic cathedral
+   Details (high-res): stone textures
+   🏗️ Structure blocks: [0, 1, 2, 3]
+   🎨 Detail blocks: [8, 9, 10, 11]
+   ✨ Independent control achieved!
+✅ Created comparison: cathedral_comparison.png
+
+📊 Creating master comparison grid...
+✅ Created: corepulse_techniques_master.png
+
+======================================================================
+✅ ALL COMPARISONS COMPLETE!
+======================================================================
+
+Generated comparison images:
+  • astronaut_comparison.png - Original vs Photorealistic Boost
+  • cat_dog_comparison.png - Cat vs Dog (token masking)
+  • cathedral_comparison.png - Baseline vs Multi-scale
+  • corepulse_techniques_master.png - All techniques grid
+
+🎉 Exact replications of CorePulse demos with MLX!
