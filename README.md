@@ -161,18 +161,39 @@ For complex orchestration scenarios using the Prefect workflow engine.
 
 ### Judge Optimization with DSPy
 
-The system supports **compiled judge models** using DSPy's optimization algorithms (GEPA - Generate, Expand, Prune, Aggregate):
+The system supports **compiled judge models** using DSPy's GEPA optimizer (reflective prompt evolution):
 
 ```bash
 # 1. Add training data to data/judge_train.jsonl
 # Format: {"summary": "...", "scorecard": {"criteria":[...], "total": 6.7}}
 
-# 2. Train the judge using DSPy's optimization
+# 2. Train the judge using GEPA (evolutionary optimizer)
 python tools/optimize_judge.py --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy
 
 # 3. Use the compiled judge (automatically loaded at runtime)
 export JTBD_JUDGE_COMPILED=artifacts/judge_compiled.dspy
 python run_direct.py your_idea.json
+```
+
+**GEPA** (Generate, Evolve, Prune, Aggregate) is an evolutionary optimizer that:
+- Captures full execution traces of DSPy modules
+- Uses reflection to evolve text components (prompts/instructions)
+- Allows textual feedback at predictor or system level
+- Outperforms reinforcement learning in prompt optimization
+
+From the source implementation in `tools/optimize_judge.py`:
+
+```python
+from dspy.teleprompt import GEPA
+
+class NonDecreasingEval(dspy.Eval):
+    """Returns 1 if predicted total >= gold total, else 0."""
+    def __call__(self, pred, gold, trace=None):
+        p = json.loads(pred); g = json.loads(gold)
+        return 1.0 if p.get("total",0) >= g.get("total",0) else 0.0
+
+tele = GEPA(metric=NonDecreasingEval(), max_bootstrapped_demos=4)
+compiled = tele.compile(prog, trainset=train)
 ```
 
 The compiled judge replaces the default `dspy.Predict` with an optimized program:
