@@ -168,32 +168,36 @@ The system supports **compiled judge models** using DSPy's GEPA optimizer (refle
 # Format: {"summary": "...", "scorecard": {"criteria":[...], "total": 6.7}}
 
 # 2. Train the judge using GEPA (evolutionary optimizer)
-python tools/optimize_judge.py --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy
+python tools/optimize_judge.py --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy --budget medium
 
 # 3. Use the compiled judge (automatically loaded at runtime)
 export JTBD_JUDGE_COMPILED=artifacts/judge_compiled.dspy
 python run_direct.py your_idea.json
 ```
 
-**GEPA** (Generate, Evolve, Prune, Aggregate) is an evolutionary optimizer that:
+**GEPA** is an evolutionary optimizer for prompt optimization that:
 - Captures full execution traces of DSPy modules
-- Uses reflection to evolve text components (prompts/instructions)
+- Uses reflection to evolve text components (prompts/instructions)  
 - Allows textual feedback at predictor or system level
-- Outperforms reinforcement learning in prompt optimization
+- Outperforms reinforcement learning approaches
 
-From the source implementation in `tools/optimize_judge.py`:
+From the actual implementation in `tools/optimize_judge.py`:
 
 ```python
 from dspy.teleprompt import GEPA
 
-class NonDecreasingEval(dspy.Eval):
+def non_decreasing_metric(example, pred, trace=None, pred_name=None, pred_trace=None):
     """Returns 1 if predicted total >= gold total, else 0."""
-    def __call__(self, pred, gold, trace=None):
-        p = json.loads(pred); g = json.loads(gold)
+    try:
+        p = json.loads(pred.scorecard_json)
+        g = json.loads(example.scorecard_json)
         return 1.0 if p.get("total",0) >= g.get("total",0) else 0.0
+    except Exception:
+        return 0.0
 
-tele = GEPA(metric=NonDecreasingEval(), max_bootstrapped_demos=4)
-compiled = tele.compile(prog, trainset=train)
+# Budget options: "light", "medium", "heavy"
+tele = GEPA(metric=non_decreasing_metric, auto=budget)
+compiled = tele.compile(dspy.Predict(JudgeScoreSig), trainset=train)
 ```
 
 The compiled judge replaces the default `dspy.Predict` with an optimized program:

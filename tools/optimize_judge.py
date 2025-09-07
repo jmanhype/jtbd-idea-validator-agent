@@ -39,30 +39,29 @@ def load_examples(path: str):
             xs.append(dspy.Example(summary=summ, scorecard_json=json.dumps(gold)).with_inputs("summary"))
     return xs
 
-class NonDecreasingEval(dspy.Eval):
+def non_decreasing_metric(example, pred, trace=None, pred_name=None, pred_trace=None):
     """Returns 1 if predicted total >= gold total, else 0."""
-    def __call__(self, pred, gold, trace=None):
-        try:
-            import json as _json
-            p = _json.loads(pred)
-            g = _json.loads(gold)
-            return 1.0 if p.get("total",0) >= g.get("total",0) else 0.0
-        except Exception:
-            return 0.0
+    try:
+        import json as _json
+        p = _json.loads(pred.scorecard_json)
+        g = _json.loads(example.scorecard_json)
+        return 1.0 if p.get("total",0) >= g.get("total",0) else 0.0
+    except Exception:
+        return 0.0
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", required=True, help="Path to JSONL of training examples")
     ap.add_argument("--out", required=True, help="Output path for compiled program (.dspy)")
-    ap.add_argument("--max_demos", type=int, default=4)
+    ap.add_argument("--budget", choices=["light", "medium", "heavy"], default="light", help="GEPA budget")
     args = ap.parse_args()
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
     configure_lm()
-    prog = dspy.Module(signature=JudgeScoreSig)  # base program
+    prog = dspy.Predict(JudgeScoreSig)  # base program
     train = load_examples(args.train)
-    tele = GEPA(metric=NonDecreasingEval(), max_bootstrapped_demos=args.max_demos)
+    tele = GEPA(metric=non_decreasing_metric, auto=args.budget)
     compiled = tele.compile(prog, trainset=train)
     with open(args.out, "wb") as f:
         pickle.dump(compiled, f)
