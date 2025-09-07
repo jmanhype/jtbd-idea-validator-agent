@@ -41,6 +41,58 @@ The tool generates organized reports in timestamped directories:
 - **JSON Data**: `json/analysis_data.json` - Raw analysis data
 - **Charts**: `assets/` - Radar charts, waterfall charts, and Four Forces diagrams
 
+## Technical Architecture
+
+This implementation uses **DSPy** (Declarative Self-improving Language Programs) for structured LLM interactions through **Signatures** and **Modules**.
+
+### DSPy Signatures
+
+Signatures define input/output schemas for LLM tasks:
+
+```python
+class DeconstructSig(dspy.Signature):
+    """Extract assumptions and classify levels.
+    Return JSON list of objects: [{text, level(1..3), confidence, evidence:[]}]"""
+    idea: str = dspy.InputField()
+    hunches: List[str] = dspy.InputField()
+    assumptions_json: str = dspy.OutputField()
+
+class JobsSig(dspy.Signature):
+    """Generate 5 distinct JTBD statements with Four Forces each."""
+    context: str = dspy.InputField()
+    constraints: str = dspy.InputField()
+    jobs_json: str = dspy.OutputField()
+```
+
+### DSPy Modules
+
+Modules implement business logic with automatic prompt optimization:
+
+- **`Deconstruct`**: Extracts assumptions with confidence scoring
+- **`Jobs`**: Generates JTBD statements with Four Forces analysis
+- **`Moat`**: Applies Doblin innovation framework + strategic triggers
+- **`JudgeScore`**: Evaluates ideas across 5 standardized criteria:
+  - Underserved Opportunity
+  - Strategic Impact  
+  - Market Scale
+  - Solution Differentiability
+  - Business Model Innovation
+
+### Dual-Judge Arbitration
+
+The system uses two independent judges with tie-breaking for scoring reliability:
+
+```python
+USE_DOUBLE_JUDGE = os.getenv("JTBD_DOUBLE_JUDGE", "1") == "1"  # default ON
+
+def judge_with_arbitration(summary: str):
+    if USE_DOUBLE_JUDGE:
+        score1 = JudgeScore()(summary=summary)
+        score2 = JudgeScore()(summary=summary) 
+        return merge_scores(score1, score2)  # tie-breaker logic
+    return JudgeScore()(summary=summary)
+```
+
 ## Configuration
 
 **Model Selection**: Edit `plugins/llm_dspy.py` → `configure_lm()` or set `JTBD_DSPY_MODEL`:
@@ -107,20 +159,33 @@ For complex orchestration scenarios using the Prefect workflow engine.
 
 ## Advanced Features
 
-### Judge Optimization
+### Judge Optimization with DSPy
 
-Train a custom judge model for improved scoring:
+The system supports **compiled judge models** using DSPy's optimization algorithms (GEPA - Generate, Expand, Prune, Aggregate):
 
 ```bash
 # 1. Add training data to data/judge_train.jsonl
 # Format: {"summary": "...", "scorecard": {"criteria":[...], "total": 6.7}}
 
-# 2. Train the judge
+# 2. Train the judge using DSPy's optimization
 python tools/optimize_judge.py --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy
 
-# 3. Use the compiled judge
+# 3. Use the compiled judge (automatically loaded at runtime)
 export JTBD_JUDGE_COMPILED=artifacts/judge_compiled.dspy
 python run_direct.py your_idea.json
+```
+
+The compiled judge replaces the default `dspy.Predict` with an optimized program:
+
+```python
+_compiled_judge = None
+if JUDGE_COMPILED_PATH and os.path.exists(JUDGE_COMPILED_PATH):
+    with open(JUDGE_COMPILED_PATH, "rb") as f:
+        _compiled_judge = pickle.load(f)
+
+class JudgeScore(dspy.Module):
+    def __init__(self):
+        self.p = _compiled_judge or dspy.Predict(JudgeScoreSig)  # fallback
 ```
 
 ### Environment Variables
