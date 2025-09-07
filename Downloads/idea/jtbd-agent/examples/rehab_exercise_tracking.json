@@ -1,0 +1,16 @@
+{
+  "idea_id": "urn:idea:rehab-exercise-tracking:001",
+  "title": "Home exercise tracking app that improves rehab outcomes for physical therapists ($500K-$1M ARR)",
+  "hunches": [
+    "patients abandon home rehab exercises due to lack of guidance and motivation",
+    "therapists can't effectively monitor patient progress between appointments",
+    "poor exercise compliance leads to slower recovery and re-injury",
+    "current exercise apps lack integration with clinical workflows"
+  ],
+  "context": {
+    "industry": "Healthcare Technology",
+    "target_user": "Physical therapists and rehabilitation patients",
+    "problem_severity": "high",
+    "market_size": "large"
+  }
+}

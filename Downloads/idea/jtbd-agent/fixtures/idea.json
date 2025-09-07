@@ -1,0 +1,7 @@
+{
+  "idea_id": "urn:jtbd:idea:demo",
+  "title": "AI inbox triage for clinicians",
+  "hunches": ["too many portal messages", "after-hours burden"],
+  "context": {"audience":"safety-net hospital"},
+  "constraints": []
+}
