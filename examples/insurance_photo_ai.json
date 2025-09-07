@@ -1,0 +1,15 @@
+{
+  "idea_id": "urn:idea:insurance-photo-ai:001",
+  "title": "AI Photo organizer that cuts insurance processing claim time in half",
+  "hunches": [
+    "adjusters waste hours sorting through chaotic photo documentation",
+    "photos are submitted without context or order",
+    "manual reconstruction of damage timeline is inefficient"
+  ],
+  "context": {
+    "industry": "Insurance",
+    "target_user": "Claims adjusters",
+    "problem_severity": "high",
+    "market_size": "large"
+  }
+}

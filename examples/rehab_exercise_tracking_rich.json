@@ -1,0 +1,62 @@
+{
+  "idea_id": "urn:idea:rehab-exercise-tracking:002",
+  "title": "Home exercise tracking app that improves rehab outcomes for physical therapists ($500K-$1M ARR)",
+  "hunches": [
+    "patients abandon home rehab exercises due to lack of guidance and motivation",
+    "therapists can't effectively monitor patient progress between appointments",
+    "poor exercise compliance leads to slower recovery and re-injury",
+    "current exercise apps lack integration with clinical workflows"
+  ],
+  "context": {
+    "industry": "Healthcare Technology",
+    "target_user": "Physical therapists and rehabilitation patients",
+    "problem_severity": "high",
+    "market_size": "large"
+  },
+  "problem_statement": "Home rehabilitation exercises have poor compliance rates (30-50%) due to lack of guidance, motivation, and progress tracking. Therapists struggle to monitor patient progress between appointments, leading to slower recovery and reduced treatment effectiveness.",
+  "solution_overview": "Mobile app with camera-based exercise tracking, AI-powered form correction, therapist dashboard for remote monitoring, personalized feedback system, and compliance tracking with automated alerts.",
+  "target_customer": {
+    "primary": "Physical therapists and rehabilitation clinics",
+    "secondary": "Patients undergoing physical therapy rehabilitation", 
+    "demographics": "Healthcare professionals managing 50-200 patients, patients aged 25-65 recovering from injuries or surgeries"
+  },
+  "value_propositions": [
+    "Improved patient compliance through engaging, trackable exercises",
+    "Better treatment outcomes with continuous monitoring and feedback",
+    "Increased therapist efficiency with automated progress tracking",
+    "Data-driven insights for treatment plan optimization",
+    "Reduced re-injury rates through proper form correction"
+  ],
+  "competitive_landscape": [
+    "BetterPT - telehealth physical therapy platform",
+    "SWORD Health - digital physical therapy", 
+    "Kaia Health - digital therapeutics for back pain",
+    "Physitrack - exercise prescription software"
+  ],
+  "revenue_streams": [
+    "SaaS subscription for therapists/clinics ($50-200/month per provider)",
+    "Per-patient licensing fees ($5-15/patient/month)",
+    "Premium features for advanced analytics and integrations",
+    "White-label licensing to healthcare systems"
+  ],
+  "key_metrics": [
+    "Patient compliance rates",
+    "Treatment outcome improvements", 
+    "Therapist time savings",
+    "Patient satisfaction scores",
+    "Clinical outcome data (range of motion, strength improvements)"
+  ],
+  "risks_and_challenges": [
+    "HIPAA compliance and healthcare data security",
+    "Integration with existing EMR/practice management systems",
+    "Clinical validation and evidence generation", 
+    "Insurance reimbursement complexities",
+    "Competition from established healthcare tech companies"
+  ],
+  "go_to_market_strategy": {
+    "phase1": "Direct sales to progressive physical therapy clinics",
+    "phase2": "Partner with EMR providers for integrated offerings", 
+    "phase3": "Expand to hospital systems and rehabilitation centers",
+    "channels": ["Healthcare conferences", "Professional associations", "Digital marketing to PT practices"]
+  }
+}
