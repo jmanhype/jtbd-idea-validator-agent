@@ -1,73 +1,164 @@
-# JTBD Idea Validator — DSPy Edition (Real Deal)
 
-This is a **DSPy-powered** implementation (no stubs). It uses DSPy `Signatures`/`Modules` for
-- Assumption deconstruction & level classification
-- JTBD generation (5 distinct jobs with Four Forces)
-- Moat layering (Doblin + timing/ops/customer/value)
-- Judge/score (5 criteria with rationales)
+# JTBD Idea Validator
 
-The pipeline is orchestrated with Prefect; output is a **Gamma-ready Markdown** plus chart images.
+A **Jobs to be Done (JTBD)** analysis agent powered by DSPy that validates business ideas through comprehensive framework-based evaluation.
 
-## Quick start
+## What it does
+
+This tool performs systematic business idea validation using JTBD methodology:
+
+- **Assumption Deconstruction**: Extract and classify core business assumptions (1-3 levels)
+- **JTBD Analysis**: Generate 5 distinct job statements with Four Forces (push/pull/anxiety/inertia)
+- **Moat Analysis**: Assess competitive advantages using innovation layers
+- **Scoring & Judgment**: Evaluate ideas across 5 criteria with detailed rationales
+- **Validation Planning**: Create actionable plans for assumption testing
+
+## Quick Start
 
 ```bash
+# Setup environment
 python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -U pip
 pip install -e .
-# Configure an LLM in DSPy via env vars. Examples:
-export OPENAI_API_KEY=...            # if using OpenAI client in DSPy
-export ANTHROPIC_API_KEY=...         # if using Anthropic
-# Run
-python -m jtbd_agent_dspy.cli run fixtures/idea.json --out out/gamma.md --assets out/assets
+
+# Configure LLM (required)
+export OPENAI_API_KEY=...            # for OpenAI models
+export ANTHROPIC_API_KEY=...         # for Claude models
+
+# Run analysis on example
+python run_direct.py examples/rehab_exercise_tracking_rich.json
+
+# Or specify custom output location
+python run_direct.py examples/insurance_photo_ai.json --output custom_reports/
 ```
 
-> DSPy model selection: edit `plugins/llm_dspy.py` → `configure_lm()`.
-Set your preferred model (e.g., `"gpt-4o-mini"` or `"claude-3-5-sonnet-20240620"`) and temperature/seed.
+## Output Files
 
-## Optional: HTTP sidecar for stage endpoints
+The tool generates organized reports in timestamped directories:
 
-You can run a FastAPI server that exposes `/deconstruct`, `/jobs`, `/moat`, `/judge`:
-```bash
-uvicorn jtbd_agent_dspy.service.dspy_sidecar:app --port 8088 --reload
-```
+- **Gamma Presentations**: `gamma/presentation.md` (Gamma-ready) + `gamma/presentation.html` (preview)
+- **CSV Exports**: `csv/` - Structured data for spreadsheet analysis
+- **JSON Data**: `json/analysis_data.json` - Raw analysis data
+- **Charts**: `assets/` - Radar charts, waterfall charts, and Four Forces diagrams
 
-Then point a different orchestrator to these endpoints if desired.
+## Configuration
 
-## What gets produced
-- `out/gamma.md` — paste/import into Gamma
-- `out/assets/{radar.png,waterfall.png,forces.png}`
-
-## Determinism Guardrails
-- Temperature defaults to 0.2, fixed seeds where supported.
-- Two-judge pattern is available in `plugins/llm_dspy.py` (toggle `USE_DOUBLE_JUDGE`).
-
-## Contracts Are Frozen (v1)
-See `contracts/*_v1.py`. Keep formats stable; evolve via `v2` rather than editing `v1`.
-
-
----
-
-## Two-judge arbitration (default ON)
-
-Set `JTBD_DOUBLE_JUDGE=0` to disable. By default it's ON and merges two independent judgments
-with a simple tie-breaker.
-
-## GEPA optimizer for Judge
-
-Train a compiled Judge and use it at runtime:
+**Model Selection**: Edit `plugins/llm_dspy.py` → `configure_lm()` or set `JTBD_DSPY_MODEL`:
 
 ```bash
-# 1) (optional) add more training rows to data/judge_train.jsonl (JSONL format described below)
-python -m jtbd_agent_dspy.tools.optimize_judge --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy
-
-# 2) point runtime to the compiled program
-export JTBD_JUDGE_COMPILED=artifacts/judge_compiled.dspy
-
-# 3) run the report as usual
-python -m jtbd_agent_dspy.cli run jtbd_agent_dspy/fixtures/idea.json --out out/gamma.md --assets out/assets
+export JTBD_DSPY_MODEL="gpt-4o-mini"              # OpenAI
+export JTBD_DSPY_MODEL="claude-3-5-sonnet-20240620"  # Anthropic
 ```
 
-**Training JSONL format** (one object per line):
+**Other Options**:
+
+- `JTBD_LLM_TEMPERATURE=0.2` - Response randomness (0.0-1.0)
+- `JTBD_DOUBLE_JUDGE=1` - Enable dual-judge arbitration (default: enabled)
+
+## Input Format
+
+Ideas are defined in JSON files with the following structure:
+
 ```json
-{"summary": "...", "scorecard": {"criteria":[{"name":"Underserved Opportunity","score":7.0,"rationale":"..."}, ...], "total": 6.7}}
+{
+  "idea_id": "urn:idea:example:001",
+  "title": "Your business idea title",
+  "hunches": [
+    "Key assumption about the problem",
+    "Belief about customer behavior",
+    "Market hypothesis"
+  ],
+  "problem_statement": "Clear description of the problem",
+  "solution_overview": "How your idea solves the problem",
+  "target_customer": {
+    "primary": "Main customer segment",
+    "secondary": "Secondary users",
+    "demographics": "Age, profession, context"
+  },
+  "value_propositions": ["Key benefit 1", "Key benefit 2"],
+  "competitive_landscape": ["Competitor 1", "Competitor 2"],
+  "revenue_streams": ["Revenue model 1", "Revenue model 2"]
+}
 ```
+
+See `examples/` directory for complete examples.
+
+## Alternative Execution Methods
+
+### Direct Python Script
+
+```bash
+python run_direct.py your_idea.json
+```
+
+### FastAPI Service (Optional)
+
+Run as a service with HTTP endpoints:
+
+```bash
+uvicorn service.dspy_sidecar:app --port 8088 --reload
+```
+
+Exposes endpoints: `/deconstruct`, `/jobs`, `/moat`, `/judge`
+
+### Prefect Flow (Advanced)
+
+For complex orchestration scenarios using the Prefect workflow engine.
+
+## Advanced Features
+
+### Judge Optimization
+
+Train a custom judge model for improved scoring:
+
+```bash
+# 1. Add training data to data/judge_train.jsonl
+# Format: {"summary": "...", "scorecard": {"criteria":[...], "total": 6.7}}
+
+# 2. Train the judge
+python tools/optimize_judge.py --train data/judge_train.jsonl --out artifacts/judge_compiled.dspy
+
+# 3. Use the compiled judge
+export JTBD_JUDGE_COMPILED=artifacts/judge_compiled.dspy
+python run_direct.py your_idea.json
+```
+
+### Environment Variables
+
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` - API keys for LLM providers
+- `JTBD_DSPY_MODEL` - Model name (default: "gpt-4o-mini")
+- `JTBD_LLM_TEMPERATURE` - Temperature setting (default: 0.2)
+- `JTBD_LLM_SEED` - Random seed for reproducibility (default: 42)
+- `JTBD_DOUBLE_JUDGE` - Enable dual-judge arbitration (default: 1)
+- `JTBD_JUDGE_COMPILED` - Path to compiled judge model
+
+## Project Structure
+
+```
+├── contracts/          # Pydantic models (v1 frozen contracts)
+├── core/              # Main business logic
+│   ├── pipeline.py    # Main analysis pipeline
+│   ├── score.py       # Scoring algorithms
+│   ├── plan.py        # Validation planning
+│   └── export_*.py    # Output formatters
+├── plugins/           # External integrations
+│   ├── llm_dspy.py    # DSPy LLM interface
+│   └── charts_quickchart.py  # Chart generation
+├── service/           # FastAPI service
+├── orchestration/     # Prefect flows
+├── examples/          # Sample business ideas
+├── tools/            # Optimization utilities
+└── run_direct.py     # Main CLI entry point
+```
+
+## Dependencies
+
+- **DSPy**: Language model orchestration framework
+- **Pydantic**: Data validation and serialization
+- **FastAPI/Uvicorn**: Optional HTTP service
+- **Prefect**: Optional workflow orchestration
+- **Requests**: HTTP client for external services
+
+## Contract Stability
+
+Data contracts in `contracts/*_v1.py` are frozen. For changes, create new `v2` versions rather than modifying existing contracts to ensure backward compatibility.
