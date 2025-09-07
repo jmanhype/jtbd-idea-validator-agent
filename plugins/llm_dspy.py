@@ -56,8 +56,8 @@ class MoatSig(dspy.Signature):
     layers_json: str = dspy.OutputField()
 
 class JudgeScoreSig(dspy.Signature):
-    """Score on 5 criteria with short rationales. Return JSON:
-    {criteria:[{name, score(0..10), rationale}], total} """
+    """Score business idea on exactly these 5 criteria (0-10 scale) with rationales.
+    Return JSON: {"criteria":[{"name":"Underserved Opportunity","score":7.0,"rationale":"Clear need exists..."}, {"name":"Strategic Impact","score":6.0,"rationale":"..."}, {"name":"Market Scale","score":8.0,"rationale":"..."}, {"name":"Solution Differentiability","score":5.0,"rationale":"..."}, {"name":"Business Model Innovation","score":7.0,"rationale":"..."}], "total":6.6}"""
     summary: str = dspy.InputField()
     scorecard_json: str = dspy.OutputField()
 
@@ -131,7 +131,13 @@ class JudgeScore(dspy.Module):
     def __init__(self): super().__init__(); self.p = _compiled_judge or dspy.Predict(JudgeScoreSig)
     def forward(self, summary: str):
         out = self.p(summary=summary)
-        data = json.loads(out.scorecard_json)
+        try:
+            data = json.loads(out.scorecard_json)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            print(f"Raw output: {out.scorecard_json}")
+            # Return default scores if JSON parsing fails
+            data = {"criteria": [], "total": 5.0}
         crits = []
         for item in data.get("criteria", []):
             name = item.get("name")
