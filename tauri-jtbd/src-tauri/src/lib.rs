@@ -127,11 +127,15 @@ async fn predict<T: Signature>(signature: T, api_key: &str) -> Result<String> {
 }
 
 #[tauri::command]
-async fn validate_idea(idea: BusinessIdea) -> Result<ValidationResult, String> {
-    // Get API key from environment (supports both OpenRouter and OpenAI)
-    let api_key = std::env::var("OPENROUTER_API_KEY")
-        .or_else(|_| std::env::var("OPENAI_API_KEY"))
-        .map_err(|_| "OPENROUTER_API_KEY or OPENAI_API_KEY environment variable not set. Please set one before running the app.".to_string())?;
+async fn validate_idea(idea: BusinessIdea, api_key: String) -> Result<ValidationResult, String> {
+    // Validate API key format
+    if api_key.is_empty() {
+        return Err("API key is required. Please set it in Settings.".to_string());
+    }
+
+    if !api_key.starts_with("sk-") {
+        return Err("Invalid API key format. Key should start with 'sk-'.".to_string());
+    }
 
     // Create idea summary
     let summary = format!(

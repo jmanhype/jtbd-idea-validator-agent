@@ -10,8 +10,45 @@
 
   <body>
     <main class="container">
-      <h1>🚀 JTBD Idea Validator</h1>
-      <p class="subtitle">Validate your business ideas using DSPy-powered analysis</p>
+      <div class="header">
+        <div>
+          <h1>🚀 JTBD Idea Validator</h1>
+          <p class="subtitle">Validate your business ideas using DSPy-powered analysis</p>
+        </div>
+        <button id="settings-btn" class="settings-btn" type="button">⚙️ Settings</button>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>⚙️ Settings</h2>
+            <button id="close-settings" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="api-key">API Key (OpenRouter or OpenAI)</label>
+              <input
+                id="api-key"
+                type="password"
+                placeholder="sk-or-v1-... or sk-..."
+                autocomplete="off"
+              />
+              <small class="help-text">
+                Your API key is stored locally in your browser and never sent anywhere except to the API provider.
+                <br><br>
+                <strong>Get an API key:</strong><br>
+                • <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (recommended - cost-effective)<br>
+                • <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>
+              </small>
+            </div>
+            <div class="api-status" id="api-status"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="save-settings" class="btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </div>
 
       <form id="validate-form">
         <div class="form-group">
