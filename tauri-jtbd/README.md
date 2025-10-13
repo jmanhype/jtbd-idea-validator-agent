@@ -55,8 +55,9 @@ async fn predict<T: Signature>(signature: T, api_key: &str) -> Result<String> {
 
 - **Frontend**: Vanilla JavaScript + HTML/CSS
 - **Backend**: Rust with Tauri
-- **LLM**: OpenAI GPT-4o-mini (via direct API calls)
+- **LLM**: OpenAI GPT-4o-mini via OpenRouter or OpenAI directly
 - **Pattern**: DSPy-inspired Signatures for structured LLM prompting
+- **API**: OpenRouter (cost-effective multi-model access) or OpenAI
 
 ## 📦 Setup
 
@@ -75,8 +76,14 @@ npm install
 
 ### Configuration
 
-Set your OpenAI API key as an environment variable:
+Set your API key as an environment variable. The app supports both OpenRouter and OpenAI:
 
+**OpenRouter (recommended for cost-effective access to multiple models):**
+```bash
+export OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+**OpenAI (alternative):**
 ```bash
 export OPENAI_API_KEY=sk-...
 ```

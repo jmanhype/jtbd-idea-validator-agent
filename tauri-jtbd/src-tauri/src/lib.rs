@@ -92,7 +92,7 @@ No additional text before or after the JSON.\n".to_string()
     }
 }
 
-// DSPy-style Predict module
+// DSPy-style Predict module (OpenRouter compatible)
 async fn predict<T: Signature>(signature: T, api_key: &str) -> Result<String> {
     let client = reqwest::Client::new();
 
@@ -107,14 +107,16 @@ async fn predict<T: Signature>(signature: T, api_key: &str) -> Result<String> {
     };
 
     let request = OpenAIRequest {
-        model: "gpt-4o-mini".to_string(),
+        model: "openai/gpt-4o-mini".to_string(),  // OpenRouter model format
         messages: vec![system_message, user_message],
         temperature: 0.3,
     };
 
     let response = client
-        .post("https://api.openai.com/v1/chat/completions")
+        .post("https://openrouter.ai/api/v1/chat/completions")  // OpenRouter endpoint
         .header("Authorization", format!("Bearer {}", api_key))
+        .header("HTTP-Referer", "https://github.com/tauri-apps")  // Required by OpenRouter
+        .header("X-Title", "JTBD Validator")  // Optional app name
         .json(&request)
         .send()
         .await?
@@ -126,9 +128,10 @@ async fn predict<T: Signature>(signature: T, api_key: &str) -> Result<String> {
 
 #[tauri::command]
 async fn validate_idea(idea: BusinessIdea) -> Result<ValidationResult, String> {
-    // Get API key from environment
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .map_err(|_| "OPENAI_API_KEY environment variable not set. Please set it before running the app.".to_string())?;
+    // Get API key from environment (supports both OpenRouter and OpenAI)
+    let api_key = std::env::var("OPENROUTER_API_KEY")
+        .or_else(|_| std::env::var("OPENAI_API_KEY"))
+        .map_err(|_| "OPENROUTER_API_KEY or OPENAI_API_KEY environment variable not set. Please set one before running the app.".to_string())?;
 
     // Create idea summary
     let summary = format!(
