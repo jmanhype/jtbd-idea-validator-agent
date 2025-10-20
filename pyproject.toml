@@ -8,7 +8,13 @@ dependencies = [
   "requests>=2.32",
   "dspy-ai>=2.5.12",
   "fastapi>=0.111",
-  "uvicorn>=0.30"
+  "uvicorn>=0.30",
+  "modaic>=0.1",
+  "opentelemetry-api>=1.27",
+  "opentelemetry-sdk>=1.27",
+  "opentelemetry-exporter-otlp>=1.27",
+  "opentelemetry-instrumentation-fastapi>=0.48b0",
+  "sse-starlette>=2.0"
 ]
 
 [tool.setuptools.packages.find]

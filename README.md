@@ -221,6 +221,23 @@ class JudgeScore(dspy.Module):
 - `JTBD_LLM_SEED` - Random seed for reproducibility (default: 42)
 - `JTBD_DOUBLE_JUDGE` - Enable dual-judge arbitration (default: 1)
 - `JTBD_JUDGE_COMPILED` - Path to compiled judge model
+- `OTEL_SERVICE_NAME` / `DEPLOY_ENV` - Identify the service in OTLP exports (defaults: `jtbd-dspy-sidecar`, `dev`)
+- `OTLP_ENDPOINT` / `OTLP_HEADERS` - Configure OTLP HTTP exporter endpoint and optional headers
+- `MODAIC_AGENT_ID` / `MODAIC_AGENT_REV` - Load a precompiled Modaic agent instead of the local default
+- `MODAIC_TOKEN` - Authentication token for private Modaic repositories
+- `RETRIEVER_KIND` / `RETRIEVER_NOTES` - Retriever selection (e.g., `notes`) and seed data for contextual hints
+- `API_BEARER_TOKEN` - Optional bearer token required by the FastAPI service
+- `STREAM_CHUNK_SIZE` - Chunk size for SSE streaming responses (default: 60)
+
+## Modaic Hub Integration
+
+This repo ships a complete Modaic workflow for packaging and hosting the JTBD DSPy agent.
+
+- Install Modaic (`uv add modaic` or `pip install modaic`) and export `MODAIC_TOKEN`, `MODAIC_AGENT_ID`, and optional retriever env vars.
+- Push the local agent to the hub with `python tools/push_modaic_agent.py`; the script builds a notes retriever by default.
+- Smoke-test the hosted agent via `python tools/dogfood_remote_agent.py` or `AutoAgent.from_precompiled(MODAIC_AGENT_ID)`.
+- The FastAPI sidecar (`service/dspy_sidecar.py`) can serve either the local agent or the remote Modaic revision, including an OpenAI-compatible `/v1/chat/completions` endpoint.
+- Detailed playbooks live in `docs/modaic_jtbd_agent_playbook.md` (full narrative) and `docs/modaic_jtbd_agent_gist.md` (gist-friendly quickstart).
 
 ## Project Structure
 
@@ -246,6 +263,9 @@ class JudgeScore(dspy.Module):
 - **DSPy**: Language model orchestration framework
 - **Pydantic**: Data validation and serialization
 - **FastAPI/Uvicorn**: Optional HTTP service
+- **Modaic**: Precompiled agent runtime with retriever support
+- **OpenTelemetry**: Request tracing + OTLP exporter (service observability)
+- **sse-starlette**: Server-Sent Events streaming for OpenAI-compatible responses
 - **Prefect**: Optional workflow orchestration
 - **Requests**: HTTP client for external services
 
