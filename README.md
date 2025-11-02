@@ -153,6 +153,12 @@ uvicorn service.dspy_sidecar:app --port 8088 --reload
 
 Exposes endpoints: `/deconstruct`, `/jobs`, `/moat`, `/judge`
 
+#### Web Console
+
+- Visit `http://localhost:8088/` after starting the sidecar to open the JTBD Idea Validator Console.
+- The console chains the deconstruct → jobs → moat → judge workflows and shows tool telemetry for each call.
+- Telemetry is powered by the Modaic-aware tool registry, so every run surfaces latency and error stats.
+
 ### Prefect Flow (Advanced)
 
 For complex orchestration scenarios using the Prefect workflow engine.
@@ -199,6 +205,22 @@ def non_decreasing_metric(example, pred, trace=None, pred_name=None, pred_trace=
 tele = GEPA(metric=non_decreasing_metric, auto=budget)
 compiled = tele.compile(dspy.Predict(JudgeScoreSig), trainset=train)
 ```
+
+### Programmatic Tool Evaluations
+
+The agent now exposes rich tool metadata and usage telemetry. You can inspect the
+available tools via the Modaic sidecar (`JTBDDSPyAgent.describe_tools()`) and run
+realistic regression tasks with the evaluation harness:
+
+```bash
+python tools/run_evaluations.py --idea examples/rehab_exercise_tracking_rich.json
+# Optionally reload the local/remote agent first
+python tools/run_evaluations.py --reload-agent
+```
+
+Each scenario exercises multiple tool calls, validates structured outputs, and
+reports tool usage counts, latency, and error rates to help you iterate quickly
+on prompt or schema changes.
 
 The compiled judge replaces the default `dspy.Predict` with an optimized program:
 

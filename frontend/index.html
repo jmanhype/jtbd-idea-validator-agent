@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JTBD Validator Console</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <span class="badge">JTBD</span>
+            <h1>Idea Validator Console</h1>
+        </div>
+        <p class="subtitle">Prototype, evaluate, and iterate with the DSPy-powered JTBD agent from a single workspace.</p>
+    </header>
+
+    <main class="app-shell">
+        <section class="panel form-panel">
+            <form id="analysis-form" class="form">
+                <div class="field-group">
+                    <label for="idea">Idea Overview</label>
+                    <textarea id="idea" name="idea" rows="5" required placeholder="Describe the idea you want to test.">AI rehab coach that guides patients through physical therapy exercises at home and syncs progress for clinicians.</textarea>
+                </div>
+                <div class="field-group">
+                    <label for="hunches">Hunches &amp; Assumptions <span class="hint">(one per line)</span></label>
+                    <textarea id="hunches" name="hunches" rows="4" placeholder="Clinicians struggle to monitor adherence.
+Patients forget prescribed exercises.
+We can integrate with major EHR systems."></textarea>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="context">Jobs Context <span class="hint">(JSON, optional)</span></label>
+                        <textarea id="context" name="context" rows="6" placeholder='{"industry": "Healthcare", "customer": "Outpatient PT clinics"}'></textarea>
+                    </div>
+                    <div class="field-group">
+                        <label for="constraints">Constraints &amp; Risks <span class="hint">(one per line)</span></label>
+                        <textarea id="constraints" name="constraints" rows="6" placeholder="HIPAA compliance
+Limited clinician time"></textarea>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="moat-concept">Moat Concept</label>
+                        <input id="moat-concept" name="moat-concept" type="text" placeholder="Concept name" value="AI Rehab Coach" />
+                    </div>
+                    <div class="field-group">
+                        <label for="moat-triggers">Moat Triggers <span class="hint">(optional)</span></label>
+                        <input id="moat-triggers" name="moat-triggers" type="text" placeholder="Competitors, risks, hints" />
+                    </div>
+                    <div class="field-group">
+                        <label for="judge-summary">Judge Summary</label>
+                        <input id="judge-summary" name="judge-summary" type="text" placeholder="Short summary for scoring" value="AI rehab coach for PT clinics" />
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="primary">Run Full Analysis</button>
+                    <button type="button" id="reset-button" class="ghost">Reset Results</button>
+                </div>
+                <p id="status" class="status" role="status"></p>
+            </form>
+        </section>
+
+        <section class="panel results-panel">
+            <div class="results-grid">
+                <article class="result-card" id="assumptions-card">
+                    <header>
+                        <h2>Assumption Deconstruction</h2>
+                        <span class="tag">/deconstruct</span>
+                    </header>
+                    <div class="body">
+                        <ul id="assumptions-list" class="assumption-list"></ul>
+                        <pre id="assumptions-empty" class="placeholder">Results will appear here after running the analysis.</pre>
+                    </div>
+                </article>
+                <article class="result-card" id="jobs-card">
+                    <header>
+                        <h2>Jobs To Be Done</h2>
+                        <span class="tag">/jobs</span>
+                    </header>
+                    <div class="body">
+                        <div id="jobs-list" class="jobs-list"></div>
+                        <pre id="jobs-empty" class="placeholder">No jobs generated yet.</pre>
+                    </div>
+                </article>
+                <article class="result-card" id="moat-card">
+                    <header>
+                        <h2>Moat Layers</h2>
+                        <span class="tag">/moat</span>
+                    </header>
+                    <div class="body">
+                        <div id="moat-list" class="moat-list"></div>
+                        <pre id="moat-empty" class="placeholder">Moat analysis will show recommended innovation layers.</pre>
+                    </div>
+                </article>
+                <article class="result-card" id="judge-card">
+                    <header>
+                        <h2>Scorecard</h2>
+                        <span class="tag">/judge</span>
+                    </header>
+                    <div class="body">
+                        <div id="scorecard" class="scorecard"></div>
+                        <pre id="judge-empty" class="placeholder">Judge results will summarize strengths, weaknesses, and total score.</pre>
+                    </div>
+                </article>
+                <article class="result-card telemetry-card" id="telemetry-card">
+                    <header>
+                        <h2>Tool Telemetry</h2>
+                        <span class="tag">metrics</span>
+                    </header>
+                    <div class="body">
+                        <dl id="telemetry-summary" class="telemetry-summary"></dl>
+                        <div id="telemetry-empty" class="placeholder">Metrics about the most recent run will show here, including latency and tool usage.</div>
+                        <details id="telemetry-details" class="telemetry-details">
+                            <summary>Recent Calls</summary>
+                            <ul id="telemetry-recent"></ul>
+                        </details>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Need richer evaluations? Use the HTTP API or Prefect flows documented in the README.</p>
+    </footer>
+
+    <script type="module" src="/static/app.js"></script>
+</body>
+</html>
