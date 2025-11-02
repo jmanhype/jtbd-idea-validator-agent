@@ -81,7 +81,16 @@ def call_agent_envelope(tool: str, args: Dict[str, Any]) -> Dict[str, Any]:
     try:
         result: Dict[str, Any] = json.loads(raw)
     except json.JSONDecodeError:
-        result = {"error": "Agent returned non-JSON response", "raw": raw}
+        arg_keys = sorted(args.keys())
+        result = {
+            "error": "Agent returned non-JSON response",
+            "details": {
+                "tool": tool,
+                "arg_keys": arg_keys,
+                "response_type": type(raw).__name__,
+                "response_length": len(raw) if isinstance(raw, str) else None,
+            },
+        }
 
     if telemetry and telemetry.get("total_calls"):
         result.setdefault("_telemetry", {})["tool_usage"] = telemetry

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Sequence, Tuple
@@ -124,12 +125,35 @@ def _merge_usage(accumulator: Dict[str, Any], usage: Dict[str, Any]) -> None:
 
 def _finalize_usage(accumulator: Dict[str, Any]) -> None:
     for stats in accumulator["by_tool"].values():
-        count = max(stats["count"], 1)
-        stats["avg_latency_s"] = round(stats.pop("_latency_sum") / count, 4)
+        count = stats["count"]
+        latency_sum = stats.pop("_latency_sum", 0.0)
+        if count > 0:
+            stats["avg_latency_s"] = round(latency_sum / count, 4)
+        else:
+            stats["avg_latency_s"] = 0.0
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
-    return json.loads(path.read_text())
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"Evaluation idea file not found: {path}")
+
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:  # pragma: no cover - filesystem failure
+        raise RuntimeError(f"Failed to read evaluation idea file: {path}") from exc
+
+    if len(raw.encode("utf-8")) > 1_000_000:
+        raise ValueError("Evaluation idea file exceeds 1MB limit")
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in evaluation idea file: {path}") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("Evaluation idea file must contain a JSON object at the top level")
+
+    return payload
 
 
 def _default_summary(idea: Dict[str, Any]) -> str:
@@ -258,7 +282,11 @@ def main() -> int:
         mode = reload_agent()
         print(f"Reloaded agent ({mode}) before evaluation")
 
-    idea = _load_json(args.idea)
+    try:
+        idea = _load_json(args.idea)
+    except Exception as exc:
+        print(f"Failed to load evaluation idea: {exc}", file=sys.stderr)
+        return 1
     tasks = _build_tasks(idea)
 
     results = [task.run() for task in tasks]

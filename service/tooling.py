@@ -2,30 +2,36 @@
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
 
-def _preview_payload(payload: Any, limit: int = 160) -> Optional[str]:
-    """Return a short, single-line preview of a payload for telemetry."""
+def _preview_payload(payload: Any) -> Optional[str]:
+    """Return a metadata-only preview of a payload for telemetry."""
 
     if payload is None:
         return None
 
     if isinstance(payload, str):
-        text = payload
-    else:
-        try:
-            text = json.dumps(payload)
-        except TypeError:
-            text = repr(payload)
+        return f"str(len={len(payload)})"
 
-    text = " ".join(text.split())
-    if len(text) > limit:
-        return f"{text[:limit]}…"
-    return text
+    if isinstance(payload, bytes):
+        return f"bytes(len={len(payload)})"
+
+    if isinstance(payload, (list, tuple, set)):
+        return f"{type(payload).__name__}(len={len(payload)})"
+
+    if isinstance(payload, dict):
+        keys = sorted(str(key) for key in payload.keys())
+        if not keys:
+            return "dict(keys=[])"
+        preview_keys = ", ".join(keys[:5])
+        if len(keys) > 5:
+            preview_keys += ", …"
+        return f"dict(keys=[{preview_keys}])"
+
+    return type(payload).__name__
 
 
 @dataclass
@@ -171,7 +177,6 @@ class ToolRegistry:
             result: Any = None
             try:
                 result = fn(**kwargs)
-                return result
             except Exception as exc:  # pragma: no cover - surfaced via tracker
                 error = repr(exc)
                 raise
@@ -184,6 +189,8 @@ class ToolRegistry:
                     result=result if error is None else None,
                     error=error,
                 )
+
+            return result
 
         instrumented.__signature__ = getattr(fn, "__signature__", None)  # type: ignore[attr-defined]
         instrumented._tool_spec = spec  # type: ignore[attr-defined]
