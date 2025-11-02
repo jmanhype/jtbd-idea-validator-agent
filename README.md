@@ -153,6 +153,12 @@ uvicorn service.dspy_sidecar:app --port 8088 --reload
 
 Exposes endpoints: `/deconstruct`, `/jobs`, `/moat`, `/judge`
 
+#### Web Console
+
+- Visit `http://localhost:8088/` after starting the sidecar to open the JTBD Idea Validator Console.
+- The console chains the deconstruct → jobs → moat → judge workflows and shows tool telemetry for each call.
+- Telemetry is powered by the Modaic-aware tool registry, so every run surfaces latency and error stats.
+
 ### Prefect Flow (Advanced)
 
 For complex orchestration scenarios using the Prefect workflow engine.

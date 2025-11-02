@@ -1,6 +1,9 @@
 import json
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from plugins.llm_dspy import configure_lm
@@ -12,6 +15,22 @@ from service.openai_adapter import router as openai_router
 configure_lm()
 app = FastAPI(title="JTBD DSPy Sidecar")
 instrument_app(app)
+
+
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+if _FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+def read_index() -> str:
+    if not _FRONTEND_DIR.exists():
+        raise HTTPException(status_code=404, detail="Frontend not found")
+    index_path = _FRONTEND_DIR / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="index.html is missing")
+    return index_path.read_text(encoding="utf-8")
 
 
 class DeconstructReq(BaseModel):
