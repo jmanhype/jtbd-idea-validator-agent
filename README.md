@@ -200,6 +200,22 @@ tele = GEPA(metric=non_decreasing_metric, auto=budget)
 compiled = tele.compile(dspy.Predict(JudgeScoreSig), trainset=train)
 ```
 
+### Programmatic Tool Evaluations
+
+The agent now exposes rich tool metadata and usage telemetry. You can inspect the
+available tools via the Modaic sidecar (`JTBDDSPyAgent.describe_tools()`) and run
+realistic regression tasks with the evaluation harness:
+
+```bash
+python tools/run_evaluations.py --idea examples/rehab_exercise_tracking_rich.json
+# Optionally reload the local/remote agent first
+python tools/run_evaluations.py --reload-agent
+```
+
+Each scenario exercises multiple tool calls, validates structured outputs, and
+reports tool usage counts, latency, and error rates to help you iterate quickly
+on prompt or schema changes.
+
 The compiled judge replaces the default `dspy.Predict` with an optimized program:
 
 ```python

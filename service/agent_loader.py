@@ -68,10 +68,23 @@ def call_agent_envelope(tool: str, args: Dict[str, Any]) -> Dict[str, Any]:
     with _TRACER.start_as_current_span("agent.invoke") as span:
         span.set_attribute("agent.tool", tool)
         span.set_attribute("agent.arg_keys", ",".join(sorted(args.keys())))
-        raw = get_agent()(json.dumps(payload))
+        agent = get_agent()
+        raw = agent(json.dumps(payload))
+
+    telemetry: Optional[Dict[str, Any]] = None
+    if hasattr(agent, "flush_usage_metrics"):
+        telemetry = agent.flush_usage_metrics()  # type: ignore[assignment]
+        if telemetry:
+            span.set_attribute("agent.tool_calls", telemetry.get("total_calls", 0))
+            span.set_attribute("agent.tool_errors", telemetry.get("error_count", 0))
 
     try:
-        return json.loads(raw)
+        result: Dict[str, Any] = json.loads(raw)
     except json.JSONDecodeError:
-        return {"error": "Agent returned non-JSON response", "raw": raw}
+        result = {"error": "Agent returned non-JSON response", "raw": raw}
+
+    if telemetry and telemetry.get("total_calls"):
+        result.setdefault("_telemetry", {})["tool_usage"] = telemetry
+
+    return result
 
