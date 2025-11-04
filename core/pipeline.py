@@ -1,4 +1,10 @@
-from typing import Dict, List
+"""
+Main JTBD validation pipeline orchestration.
+
+This module coordinates the complete analysis workflow: assumption deconstruction,
+JTBD analysis, moat evaluation, scoring, and report generation.
+"""
+from typing import Dict, List, Any
 from contracts.idea_v1 import IdeaV1
 from contracts.assumption_v1 import AssumptionV1
 from contracts.job_v1 import JobV1
@@ -10,7 +16,35 @@ from core.export_gamma import render_markdown, assemble_gamma_doc
 from core.export_spreadsheet import export_to_csv
 from plugins import llm_dspy, charts_quickchart as charts
 
-def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> Dict:
+
+def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> Dict[str, Any]:
+    """
+    Execute complete JTBD validation analysis pipeline.
+
+    This function orchestrates the full analysis workflow:
+    1. LLM configuration and context enrichment
+    2. Assumption deconstruction with confidence scoring
+    3. JTBD analysis with Four Forces
+    4. Innovation moat analysis (Doblin framework)
+    5. Dual-judge scoring with arbitration
+    6. Validation plan generation
+    7. Chart creation and report export
+
+    Args:
+        idea: Business idea to validate (IdeaV1 contract)
+        assets_dir: Directory path for saving generated charts/images
+        output_dir: Base directory for all output files (default: "output")
+
+    Returns:
+        Dictionary containing:
+            - gamma_md: Markdown presentation content
+            - gamma_doc: Structured Gamma document
+            - metrics: Analysis metrics (delta, akr)
+            - csv_files: Paths to exported CSV files
+            - s0, s1: Initial and final scorecards
+            - delta, akr: Score change and risk metrics
+            - assumptions, jobs, plan: Analysis artifacts
+    """
     llm_dspy.configure_lm()
 
     # Prepare enriched context from available business information
