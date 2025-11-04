@@ -1,6 +1,16 @@
-import os, json, hashlib, random
+"""
+DSPy-based LLM orchestration for JTBD validation.
+
+This module defines DSPy Signatures and Modules for structured business idea
+analysis including assumption extraction, JTBD generation, moat analysis,
+and scoring with dual-judge arbitration.
+"""
+import os
+import json
+import hashlib
+import pickle
+from typing import List, Dict, Any, Optional
 import dspy
-from typing import List, Dict, Tuple
 from json_repair import repair_json
 from contracts.assumption_v1 import AssumptionV1
 from contracts.job_v1 import JobV1
@@ -14,23 +24,40 @@ USE_DOUBLE_JUDGE = os.getenv("JTBD_DOUBLE_JUDGE", "1") == "1"  # default ON
 def _uid(s: str) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:10]
 
-def configure_lm():
-    """Configure DSPy global LLM. Edit model name here to your provider choice."""
+def configure_lm() -> None:
+    """
+    Configure DSPy global LLM with provider-specific settings.
+
+    Detects and initializes the appropriate LLM provider based on the
+    JTBD_DSPY_MODEL environment variable. Falls back to generic LM
+    if provider-specific initialization fails.
+
+    Environment Variables:
+        JTBD_DSPY_MODEL: Model identifier (default: "gpt-4o-mini")
+        JTBD_LLM_TEMPERATURE: Sampling temperature (default: 0.2)
+        JTBD_LLM_SEED: Random seed for reproducibility (default: 42)
+
+    Raises:
+        ImportError: If required provider library is not installed
+        ValueError: If model configuration is invalid
+    """
     model = os.getenv("JTBD_DSPY_MODEL", "gpt-4o-mini")
-    
+
     # Check if it's a Claude model
     if "claude" in model.lower():
         try:
             lm = dspy.Anthropic(model=model, max_tokens=4000, temperature=TEMPERATURE)
-        except Exception:
-            # Fallback to generic LM
+        except (ImportError, ValueError) as e:
+            # Fallback to generic LM if Anthropic library missing or invalid config
+            print(f"Warning: Anthropic initialization failed ({e}), falling back to generic LM")
             lm = dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
     else:
         # Try OpenAI first
         try:
             lm = dspy.OpenAI(model=model, max_tokens=4000, temperature=TEMPERATURE, seed=SEED)
-        except Exception:
-            # Fallback to a generic LM
+        except (ImportError, ValueError) as e:
+            # Fallback to a generic LM if OpenAI library missing or invalid config
+            print(f"Warning: OpenAI initialization failed ({e}), falling back to generic LM")
             lm = dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
     dspy.configure(lm=lm)
 
@@ -64,8 +91,13 @@ class JudgeScoreSig(dspy.Signature):
 
 # ---------------- Modules ----------------
 class Deconstruct(dspy.Module):
-    def __init__(self): super().__init__(); self.p = dspy.Predict(DeconstructSig)
-    def forward(self, idea: str, hunches: List[str]):
+    """Extract and classify business assumptions from idea description."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.p = dspy.Predict(DeconstructSig)
+
+    def forward(self, idea: str, hunches: List[str]) -> List[AssumptionV1]:
         out = self.p(idea=idea, hunches=hunches)
         data = json.loads(out.assumptions_json)
         # post-process: bound / defaults
@@ -93,8 +125,13 @@ class Deconstruct(dspy.Module):
         return items
 
 class Jobs(dspy.Module):
-    def __init__(self): super().__init__(); self.p = dspy.Predict(JobsSig)
-    def forward(self, context: Dict[str,str], constraints: List[str]):
+    """Generate JTBD statements with Four Forces analysis."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.p = dspy.Predict(JobsSig)
+
+    def forward(self, context: Dict[str, str], constraints: List[str]) -> List[JobV1]:
         out = self.p(context=json.dumps(context), constraints=json.dumps(constraints))
         try:
             arr = json.loads(out.jobs_json)
@@ -115,8 +152,13 @@ class Jobs(dspy.Module):
         return jobs
 
 class Moat(dspy.Module):
-    def __init__(self): super().__init__(); self.p = dspy.Predict(MoatSig)
-    def forward(self, concept: str, triggers: str):
+    """Apply Doblin innovation framework for competitive moat analysis."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.p = dspy.Predict(MoatSig)
+
+    def forward(self, concept: str, triggers: str) -> List[InnovationLayerV1]:
         out = self.p(concept=concept, triggers=triggers)
         try:
             arr = json.loads(out.layers_json)
@@ -132,22 +174,32 @@ class Moat(dspy.Module):
             layers.append(InnovationLayerV1(layer_id=f"layer:{_uid(t+tr+ef)}", type=t, trigger=tr, effect=ef))
         return layers
 
-CRITERIA = ["Underserved Opportunity","Strategic Impact","Market Scale","Solution Differentiability","Business Model Innovation"]
+CRITERIA: List[str] = [
+    "Underserved Opportunity",
+    "Strategic Impact",
+    "Market Scale",
+    "Solution Differentiability",
+    "Business Model Innovation"
+]
 
-
-import pickle
-JUDGE_COMPILED_PATH = os.getenv("JTBD_JUDGE_COMPILED")
+JUDGE_COMPILED_PATH: Optional[str] = os.getenv("JTBD_JUDGE_COMPILED")
 _compiled_judge = None
 if JUDGE_COMPILED_PATH and os.path.exists(JUDGE_COMPILED_PATH):
     try:
         with open(JUDGE_COMPILED_PATH, "rb") as f:
             _compiled_judge = pickle.load(f)
-    except Exception:
+    except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
+        print(f"Warning: Failed to load compiled judge from {JUDGE_COMPILED_PATH}: {e}")
         _compiled_judge = None
 
 class JudgeScore(dspy.Module):
-    def __init__(self): super().__init__(); self.p = _compiled_judge or dspy.Predict(JudgeScoreSig)
-    def forward(self, summary: str):
+    """Score business ideas on 5 standardized criteria with rationales."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.p = _compiled_judge or dspy.Predict(JudgeScoreSig)
+
+    def forward(self, summary: str) -> ScorecardV1:
         out = self.p(summary=summary)
         try:
             data = json.loads(out.scorecard_json)
@@ -157,8 +209,9 @@ class JudgeScore(dspy.Module):
             try:
                 # Try to repair malformed JSON
                 data = json.loads(repair_json(out.scorecard_json))
-            except Exception:
+            except (json.JSONDecodeError, ValueError, TypeError) as repair_error:
                 # Return default scores if JSON repair also fails
+                print(f"JSON repair also failed: {repair_error}")
                 data = {"criteria": [], "total": 5.0}
         crits = []
         for item in data.get("criteria", []):
@@ -178,6 +231,22 @@ class JudgeScore(dspy.Module):
 
 # --------------- Double-judge arbitration (optional) ---------------
 def judge_with_arbitration(summary: str) -> ScorecardV1:
+    """
+    Execute dual-judge scoring with arbitration for improved reliability.
+
+    Runs two independent judges and merges their scores using tie-breaking logic:
+    - If scores differ by ≤1.5: average them
+    - If scores differ by >1.5: take the lower (more conservative) score
+
+    Args:
+        summary: Business idea summary to evaluate
+
+    Returns:
+        ScorecardV1 with arbitrated scores and combined rationales
+
+    Environment:
+        JTBD_DOUBLE_JUDGE: Enable dual-judge (default: "1")
+    """
     if not USE_DOUBLE_JUDGE:
         return JudgeScore()(summary=summary)
     j1 = JudgeScore()(summary=summary)
