@@ -1,6 +1,7 @@
 import os, json, hashlib, random
 import dspy
 from typing import List, Dict, Tuple
+from json_repair import repair_json
 from contracts.assumption_v1 import AssumptionV1
 from contracts.job_v1 import JobV1
 from contracts.scorecard_v1 import ScorecardV1, Criterion
@@ -74,7 +75,16 @@ class Deconstruct(dspy.Module):
             if not text: continue
             level = int(obj.get("level", 2))
             level = 1 if level < 1 else 3 if level > 3 else level
-            conf = float(obj.get("confidence", 0.6))
+            # Handle confidence - may be numeric or text like "high"/"medium"/"low"
+            conf_val = obj.get("confidence", 0.6)
+            if isinstance(conf_val, str):
+                conf_map = {"low": 0.3, "medium": 0.6, "high": 0.9, "very high": 1.0}
+                conf = conf_map.get(conf_val.lower().strip(), 0.6)
+            else:
+                try:
+                    conf = float(conf_val)
+                except (ValueError, TypeError):
+                    conf = 0.6
             conf = max(0.0, min(1.0, conf))
             items.append(AssumptionV1(
                 assumption_id=f"assump:{_uid(text)}", text=text, level=level, confidence=conf,
@@ -86,7 +96,11 @@ class Jobs(dspy.Module):
     def __init__(self): super().__init__(); self.p = dspy.Predict(JobsSig)
     def forward(self, context: Dict[str,str], constraints: List[str]):
         out = self.p(context=json.dumps(context), constraints=json.dumps(constraints))
-        arr = json.loads(out.jobs_json)
+        try:
+            arr = json.loads(out.jobs_json)
+        except json.JSONDecodeError:
+            # Try to repair malformed JSON
+            arr = json.loads(repair_json(out.jobs_json))
         jobs = []
         seen = set()
         for obj in arr[:12]:
@@ -104,7 +118,11 @@ class Moat(dspy.Module):
     def __init__(self): super().__init__(); self.p = dspy.Predict(MoatSig)
     def forward(self, concept: str, triggers: str):
         out = self.p(concept=concept, triggers=triggers)
-        arr = json.loads(out.layers_json)
+        try:
+            arr = json.loads(out.layers_json)
+        except json.JSONDecodeError:
+            # Try to repair malformed JSON
+            arr = json.loads(repair_json(out.layers_json))
         layers = []
         for obj in arr[:6]:
             t = str(obj.get("type","")).strip()
@@ -136,8 +154,12 @@ class JudgeScore(dspy.Module):
         except json.JSONDecodeError as e:
             print(f"JSON decode error: {e}")
             print(f"Raw output: {out.scorecard_json}")
-            # Return default scores if JSON parsing fails
-            data = {"criteria": [], "total": 5.0}
+            try:
+                # Try to repair malformed JSON
+                data = json.loads(repair_json(out.scorecard_json))
+            except Exception:
+                # Return default scores if JSON repair also fails
+                data = {"criteria": [], "total": 5.0}
         crits = []
         for item in data.get("criteria", []):
             name = item.get("name")

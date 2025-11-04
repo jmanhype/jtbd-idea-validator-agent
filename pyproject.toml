@@ -15,7 +15,8 @@ dependencies = [
   "opentelemetry-sdk>=1.27",
   "opentelemetry-exporter-otlp>=1.27",
   "opentelemetry-instrumentation-fastapi>=0.48b0",
-  "sse-starlette>=2.0"
+  "sse-starlette>=2.0",
+  "httpx>=0.27"
 ]
 
 [tool.setuptools.packages.find]
