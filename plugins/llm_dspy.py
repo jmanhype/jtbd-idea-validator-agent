@@ -32,33 +32,22 @@ def _create_lm():
     """
     Create DSPy LM instance based on environment config.
 
-    Detects and initializes the appropriate LLM provider based on the
-    JTBD_DSPY_MODEL environment variable. Falls back to generic LM
-    if provider-specific initialization fails.
+    Uses DSPy 2.5+ unified LM API: dspy.LM('provider/model')
 
     Environment Variables:
-        JTBD_DSPY_MODEL: Model identifier (default: "gpt-4o-mini")
+        JTBD_DSPY_MODEL: Model identifier in format 'provider/model'
+            Examples: 'openai/gpt-4o-mini', 'anthropic/claude-3-sonnet',
+                      'groq/llama-3.3-70b-versatile'
         JTBD_LLM_TEMPERATURE: Sampling temperature (default: 0.2)
-        JTBD_LLM_SEED: Random seed for reproducibility (default: 42)
     """
-    model = os.getenv("JTBD_DSPY_MODEL", "gpt-4o-mini")
+    model = os.getenv("JTBD_DSPY_MODEL", "openai/gpt-4o-mini")
 
-    # Check if it's a Claude model
-    if "claude" in model.lower():
-        try:
-            return dspy.Anthropic(model=model, max_tokens=4000, temperature=TEMPERATURE)
-        except (ImportError, ValueError) as e:
-            # Fallback to generic LM if Anthropic library missing or invalid config
-            print(f"Warning: Anthropic initialization failed ({e}), falling back to generic LM")
-            return dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
-    else:
-        # Try OpenAI first
-        try:
-            return dspy.OpenAI(model=model, max_tokens=4000, temperature=TEMPERATURE, seed=SEED)
-        except (ImportError, ValueError) as e:
-            # Fallback to a generic LM if OpenAI library missing or invalid config
-            print(f"Warning: OpenAI initialization failed ({e}), falling back to generic LM")
-            return dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
+    # Ensure model has provider prefix for DSPy 2.5+
+    if "/" not in model:
+        # Legacy format without provider - assume OpenAI
+        model = f"openai/{model}"
+
+    return dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
 
 def get_lm():
     """Get or create the global LM instance."""
@@ -71,22 +60,17 @@ def get_lm():
 _judge_lm_instance = None
 
 def _create_judge_lm():
-    """Create DSPy LM for judge scoring with higher temperature."""
-    model = os.getenv("JTBD_DSPY_MODEL", "gpt-4o-mini")
+    """Create DSPy LM for judge scoring with higher temperature.
 
-    if "claude" in model.lower():
-        try:
-            return dspy.Anthropic(model=model, max_tokens=4000, temperature=JUDGE_TEMPERATURE)
-        except (ImportError, ValueError) as e:
-            print(f"Warning: Anthropic judge init failed ({e}), falling back to generic LM")
-            return dspy.LM(model=model, max_tokens=4000, temperature=JUDGE_TEMPERATURE)
-    else:
-        try:
-            # No seed for judge to allow variance
-            return dspy.OpenAI(model=model, max_tokens=4000, temperature=JUDGE_TEMPERATURE)
-        except (ImportError, ValueError) as e:
-            print(f"Warning: OpenAI judge init failed ({e}), falling back to generic LM")
-            return dspy.LM(model=model, max_tokens=4000, temperature=JUDGE_TEMPERATURE)
+    Uses DSPy 2.5+ unified LM API with JUDGE_TEMPERATURE for variance.
+    """
+    model = os.getenv("JTBD_DSPY_MODEL", "openai/gpt-4o-mini")
+
+    # Ensure model has provider prefix for DSPy 2.5+
+    if "/" not in model:
+        model = f"openai/{model}"
+
+    return dspy.LM(model=model, max_tokens=4000, temperature=JUDGE_TEMPERATURE)
 
 def get_judge_lm():
     """Get or create the judge LM instance with higher temperature."""
