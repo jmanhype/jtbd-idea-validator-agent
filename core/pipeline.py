@@ -98,11 +98,21 @@ def _run_pipeline_inner(idea: IdeaV1, assets_dir: str, output_dir: str) -> Dict[
         moat_triggers = f"Competitors: {idea.competitive_landscape[0]}" if idea.competitive_landscape else ""
     layers = llm_dspy.Moat()(concept=idea.title, triggers=moat_triggers)
 
-    # 3) Judge with enriched business context
+    # 3) Judge with full context (assumptions, jobs, moat) for differentiated scoring
     judge_summary = idea.title
+    if idea.problem_statement:
+        judge_summary += f". Problem: {idea.problem_statement}"
+    if idea.solution_overview:
+        judge_summary += f". Solution: {idea.solution_overview}"
     if idea.value_propositions:
-        judge_summary += f" Value props: {', '.join(idea.value_propositions[:3])}"  # Limit to avoid token overflow
-    s1: ScorecardV1 = llm_dspy.judge_with_arbitration(summary=judge_summary)
+        judge_summary += f". Value props: {', '.join(idea.value_propositions[:3])}"
+
+    s1: ScorecardV1 = llm_dspy.judge_with_arbitration(
+        idea_summary=judge_summary,
+        assumptions=assumptions,
+        jobs=jobs,
+        moat=layers
+    )
 
     # 4) ΔScore + AKR + Plan
     d = delta(s0, s1)
