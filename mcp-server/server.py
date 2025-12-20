@@ -21,6 +21,13 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 import structlog
 
+# Import market reality functions
+from plugins.market_reality import (
+    search_competitors,
+    detect_platform_risk,
+    scan_regulatory_requirements,
+)
+
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -253,7 +260,7 @@ After retrieving the report, provide:
 
 
 @mcp.tool()
-def validate_idea(
+async def validate_idea(
     title: str,
     problem_statement: str,
     solution_overview: str,
@@ -323,6 +330,72 @@ def validate_idea(
 
         log.info("Running validation pipeline", idea_id=idea_id, report_dir=str(base_dir))
 
+        # =============================================================================
+        # Market Reality Analysis - Before pipeline
+        # =============================================================================
+
+        market_reality = {}
+
+        # 1. Competitor Search (async, optional if EXA_API_KEY is set)
+        exa_api_key = os.getenv("EXA_API_KEY")
+        if exa_api_key:
+            try:
+                log.info("Searching for competitors via Exa API")
+                competitor_data = await search_competitors(
+                    idea_title=title,
+                    industry=target_customer or "general"
+                )
+                market_reality["validated_competitors"] = competitor_data.get("validated_competitors", [])
+                log.info("Competitor search completed", total_found=competitor_data.get("total_results", 0))
+            except Exception as e:
+                log.warning("Competitor search failed", error=str(e))
+                market_reality["validated_competitors"] = []
+                market_reality["competitor_search_error"] = str(e)
+        else:
+            log.info("Skipping competitor search - no EXA_API_KEY")
+            market_reality["validated_competitors"] = []
+            market_reality["competitor_search_note"] = "Competitor search skipped - no EXA_API_KEY"
+
+        # 2. Platform Risk Detection (sync)
+        try:
+            log.info("Detecting platform risk")
+            platform_risk = detect_platform_risk(
+                idea_title=title,
+                solution_overview=solution_overview
+            )
+            market_reality["platform_risk"] = {
+                "level": platform_risk.get("risk_level", "UNKNOWN"),
+                "warnings": platform_risk.get("warnings", []),
+                "platform_dependencies": platform_risk.get("platform_dependencies", [])
+            }
+            log.info("Platform risk detected", level=platform_risk.get("risk_level"))
+        except Exception as e:
+            log.warning("Platform risk detection failed", error=str(e))
+            market_reality["platform_risk"] = {
+                "level": "UNKNOWN",
+                "warnings": [f"Error detecting platform risk: {str(e)}"],
+                "platform_dependencies": []
+            }
+
+        # 3. Regulatory Requirements Scan (sync)
+        try:
+            log.info("Scanning regulatory requirements")
+            regulatory_scan = scan_regulatory_requirements(
+                idea_title=title,
+                industry=target_customer or "general",
+                target_regions=None  # Could be enhanced to extract from idea context
+            )
+            market_reality["regulatory_requirements"] = regulatory_scan.get("regulations", [])
+            market_reality["detected_industry"] = regulatory_scan.get("detected_industry", "General")
+            market_reality["compliance_notes"] = regulatory_scan.get("compliance_notes", [])
+            log.info("Regulatory scan completed",
+                    detected_industry=regulatory_scan.get("detected_industry"),
+                    regulations_found=len(regulatory_scan.get("regulations", [])))
+        except Exception as e:
+            log.warning("Regulatory scan failed", error=str(e))
+            market_reality["regulatory_requirements"] = []
+            market_reality["regulatory_scan_error"] = str(e)
+
         # Run the pipeline
         result = run_pipeline(idea, str(assets_dir), str(base_dir))
 
@@ -383,6 +456,7 @@ def validate_idea(
                 for stage in result["plan"].stages
             ]
         },
+        "market_reality": market_reality,
         "report_path": str(base_dir / "gamma" / "presentation.md"),
     }
     except Exception as e:
@@ -398,7 +472,7 @@ def validate_idea(
 
 
 @mcp.tool()
-def quick_validate(
+async def quick_validate(
     idea: str,
     hunches: list[str],
 ) -> dict:
@@ -414,7 +488,7 @@ def quick_validate(
     log.info("Starting quick validation")
 
     try:
-        result = validate_idea(
+        result = await validate_idea(
             title=idea,
             problem_statement=f"Solving a problem related to: {idea}",
             solution_overview=idea,
