@@ -64,3 +64,9 @@ test_*.json
 # Temporary files
 *.tmp
 *.temp
+
+# Node.js / Electron
+node_modules/
+dist-electron/
+*.tsbuildinfo
+.vite/

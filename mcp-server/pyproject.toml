@@ -1,0 +1,17 @@
+[project]
+name = "jtbd-validator-mcp"
+version = "0.1.0"
+description = "MCP Server for JTBD Idea Validator"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "structlog>=24.1.0",
+]
+
+[project.scripts]
+jtbd-validator-mcp = "server:mcp.run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -24,9 +24,12 @@ USE_DOUBLE_JUDGE = os.getenv("JTBD_DOUBLE_JUDGE", "1") == "1"  # default ON
 def _uid(s: str) -> str:
     return hashlib.sha1(s.encode()).hexdigest()[:10]
 
-def configure_lm() -> None:
+# Global LM instance - created once at module load
+_lm_instance = None
+
+def _create_lm():
     """
-    Configure DSPy global LLM with provider-specific settings.
+    Create DSPy LM instance based on environment config.
 
     Detects and initializes the appropriate LLM provider based on the
     JTBD_DSPY_MODEL environment variable. Falls back to generic LM
@@ -36,30 +39,60 @@ def configure_lm() -> None:
         JTBD_DSPY_MODEL: Model identifier (default: "gpt-4o-mini")
         JTBD_LLM_TEMPERATURE: Sampling temperature (default: 0.2)
         JTBD_LLM_SEED: Random seed for reproducibility (default: 42)
-
-    Raises:
-        ImportError: If required provider library is not installed
-        ValueError: If model configuration is invalid
     """
     model = os.getenv("JTBD_DSPY_MODEL", "gpt-4o-mini")
 
     # Check if it's a Claude model
     if "claude" in model.lower():
         try:
-            lm = dspy.Anthropic(model=model, max_tokens=4000, temperature=TEMPERATURE)
+            return dspy.Anthropic(model=model, max_tokens=4000, temperature=TEMPERATURE)
         except (ImportError, ValueError) as e:
             # Fallback to generic LM if Anthropic library missing or invalid config
             print(f"Warning: Anthropic initialization failed ({e}), falling back to generic LM")
-            lm = dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
+            return dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
     else:
         # Try OpenAI first
         try:
-            lm = dspy.OpenAI(model=model, max_tokens=4000, temperature=TEMPERATURE, seed=SEED)
+            return dspy.OpenAI(model=model, max_tokens=4000, temperature=TEMPERATURE, seed=SEED)
         except (ImportError, ValueError) as e:
             # Fallback to a generic LM if OpenAI library missing or invalid config
             print(f"Warning: OpenAI initialization failed ({e}), falling back to generic LM")
-            lm = dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
-    dspy.configure(lm=lm)
+            return dspy.LM(model=model, max_tokens=4000, temperature=TEMPERATURE)
+
+def get_lm():
+    """Get or create the global LM instance."""
+    global _lm_instance
+    if _lm_instance is None:
+        _lm_instance = _create_lm()
+    return _lm_instance
+
+def configure_lm() -> None:
+    """
+    Configure DSPy LM - uses dspy.context() for async compatibility.
+
+    This function is now a no-op for backwards compatibility.
+    The actual LM is set via dspy.context() in get_dspy_context().
+
+    For async contexts (like MCP handlers), use get_dspy_context() instead
+    to avoid the 'configure can only be called from the same async task' error.
+    """
+    pass
+
+def get_dspy_context():
+    """
+    Get a dspy.context() manager with the configured LM.
+
+    Use this in async contexts (like MCP handlers) to avoid the
+    'configure can only be called from the same async task' error.
+
+    Returns:
+        A context manager that sets the DSPy LM for the current scope.
+
+    Example:
+        with get_dspy_context():
+            result = my_dspy_module(input)
+    """
+    return dspy.context(lm=get_lm())
 
 # ---------------- Signatures ----------------
 class DeconstructSig(dspy.Signature):

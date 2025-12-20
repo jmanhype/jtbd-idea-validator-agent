@@ -30,6 +30,8 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
     6. Validation plan generation
     7. Chart creation and report export
 
+    Uses dspy.context() for async compatibility with MCP server.
+
     Args:
         idea: Business idea to validate (IdeaV1 contract)
         assets_dir: Directory path for saving generated charts/images
@@ -45,11 +47,16 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
             - delta, akr: Score change and risk metrics
             - assumptions, jobs, plan: Analysis artifacts
     """
-    llm_dspy.configure_lm()
+    # Use context manager for async-safe DSPy configuration
+    with llm_dspy.get_dspy_context():
+        return _run_pipeline_inner(idea, assets_dir, output_dir)
 
+
+def _run_pipeline_inner(idea: IdeaV1, assets_dir: str, output_dir: str) -> Dict[str, Any]:
+    """Inner pipeline logic - runs within dspy.context()."""
     # Prepare enriched context from available business information
     enriched_context = dict(idea.context) if idea.context else {}
-    
+
     # Add rich business context when available
     if idea.problem_statement:
         enriched_context["problem"] = idea.problem_statement
@@ -61,12 +68,12 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
         enriched_context["competitors"] = ", ".join(idea.competitive_landscape)
     if idea.revenue_streams:
         enriched_context["revenue_model"] = ", ".join(idea.revenue_streams)
-    
+
     # Prepare enriched constraints/context for analysis
     all_constraints = list(idea.constraints) if idea.constraints else []
     if idea.risks_and_challenges:
         all_constraints.extend(idea.risks_and_challenges)
-    
+
     # Enhanced deconstruction with business context
     deconstruct_input = idea.title
     if idea.problem_statement or idea.solution_overview:
@@ -83,7 +90,7 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
 
     # 2) JTBD with enriched context, Moat layers
     jobs: List[JobV1] = llm_dspy.Jobs()(context=enriched_context, constraints=all_constraints)
-    
+
     # Enhanced moat analysis with competitive context (keep simple to avoid JSON parsing issues)
     moat_triggers = ""
     if idea.competitive_landscape:
@@ -129,7 +136,7 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
 
     # Export to spreadsheets
     from pathlib import Path
-    
+
     # Determine CSV directory based on output_dir structure
     csv_dir = output_dir
     if Path(output_dir).name.startswith(("test_idea_", "idea_")):
@@ -137,7 +144,7 @@ def run_pipeline(idea: IdeaV1, assets_dir: str, output_dir: str = "output") -> D
         csv_subdir = Path(output_dir) / "csv"
         csv_subdir.mkdir(parents=True, exist_ok=True)
         csv_dir = str(csv_subdir)
-    
+
     csv_files = export_to_csv(
         output_dir=csv_dir,
         s0=s0, s1=s1, delta=d, akr=risk,
