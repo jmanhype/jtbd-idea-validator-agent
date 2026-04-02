@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JTBD Idea Validator</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <div class="header">
+        <div>
+          <h1>🚀 JTBD Idea Validator</h1>
+          <p class="subtitle">Validate your business ideas using DSPy-powered analysis</p>
+        </div>
+        <button id="settings-btn" class="settings-btn" type="button">⚙️ Settings</button>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>⚙️ Settings</h2>
+            <button id="close-settings" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="api-key">API Key (OpenRouter or OpenAI)</label>
+              <input
+                id="api-key"
+                type="password"
+                placeholder="sk-or-v1-... or sk-..."
+                autocomplete="off"
+              />
+              <small class="help-text">
+                Your API key is stored locally in your browser and never sent anywhere except to the API provider.
+                <br><br>
+                <strong>Get an API key:</strong><br>
+                • <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> (recommended - cost-effective)<br>
+                • <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>
+              </small>
+            </div>
+            <div class="api-status" id="api-status"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="save-settings" class="btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <form id="validate-form">
+        <div class="form-group">
+          <label for="title">Idea Title</label>
+          <input
+            id="title"
+            type="text"
+            placeholder="E.g., AI-powered rehab exercise tracker"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="problem">Problem Statement</label>
+          <textarea
+            id="problem"
+            rows="3"
+            placeholder="What problem are you solving?"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="solution">Solution Overview</label>
+          <textarea
+            id="solution"
+            rows="3"
+            placeholder="How does your idea solve the problem?"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="target">Target Customer</label>
+          <input
+            id="target"
+            type="text"
+            placeholder="Who is your primary customer?"
+            required
+          />
+        </div>
+
+        <button type="submit" id="validate-btn">
+          Validate Idea
+        </button>
+      </form>
+
+      <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <p>Analyzing your idea with DSPy...</p>
+      </div>
+
+      <div id="results" class="results" style="display: none;">
+        <h2>Validation Results</h2>
+
+        <div class="score-card">
+          <div class="score-value">
+            <span id="score">0</span>/10
+          </div>
+          <div class="score-label">Overall Score</div>
+        </div>
+
+        <div class="section">
+          <h3>📊 Rationale</h3>
+          <p id="rationale"></p>
+        </div>
+
+        <div class="section">
+          <h3>💡 Key Assumptions</h3>
+          <ul id="assumptions"></ul>
+        </div>
+
+        <div class="section">
+          <h3>🎯 Recommendations</h3>
+          <ul id="recommendations"></ul>
+        </div>
+      </div>
+
+      <div id="error" class="error" style="display: none;"></div>
+    </main>
+  </body>
+</html>
